@@ -48,12 +48,10 @@ function asGlimpseModule(value: unknown): GlimpseModule | null {
 function candidatePaths(): string[] {
   const home = process.env.HOME;
   return [
-    path.resolve(process.cwd(), "node_modules/glimpseui/index.js"),
-    path.resolve(process.cwd(), "node_modules/glimpseui/dist/index.js"),
+    path.resolve(process.cwd(), "node_modules/glimpseui/src/glimpse.mjs"),
     ...(home
       ? [
-          path.resolve(home, ".pi/agent/npm/node_modules/glimpseui/index.js"),
-          path.resolve(home, ".pi/agent/npm/node_modules/glimpseui/dist/index.js"),
+          path.resolve(home, ".pi/agent/npm/node_modules/glimpseui/src/glimpse.mjs"),
         ]
       : []),
   ];
@@ -71,8 +69,11 @@ export async function loadGlimpse(
       const loaded =
         asGlimpseModule(moduleRecord?.default) ?? asGlimpseModule(moduleValue);
       if (loaded) return loaded;
-    } catch {
-      // Capability detection is intentionally fail-closed.
+    } catch (error) {
+      // Capability detection is intentionally fail-closed; warn once so a broken path is not invisible.
+      console.warn(
+        `[glimpse] failed to load candidate ${candidate}: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
   return null;
