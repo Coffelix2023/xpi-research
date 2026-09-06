@@ -6,8 +6,7 @@
 
 > 无构建步骤、直接加载 TypeScript 源码、严格质量门禁。
 
-[快速开始](#快速开始) · [命令列表](#命令列表) · [开发命令](#开发命令) · [目录结构](#目录结构) · [设计规范](#设计规范)
-
+[快速开始](#快速开始) · [研究流程](#研究流程) · [命令列表](#命令列表) · [开发命令](#开发命令) · [目录结构](#目录结构) · [设计规范](#设计规范)
 ---
 
 ## 项目简介
@@ -18,7 +17,7 @@
 
 - **无构建步骤**：Pi 直接加载 `./src/index.ts` TS 源码，不提交编译产物（`dist/` 或 bundle）。
 - **Pi 原生 UI**：使用 `ctx.ui.*` 与 `@earendil-works/pi-tui` 进行渲染，绝不劫持终端或引入竞争性终端库。
-- **零重度运行时依赖**：依赖宿主提供的 API 与严格类型定义（`@sinclair/typebox`、TypeScript strict）。
+- **零重度运行时依赖**：依赖宿主提供的 API 与严格类型定义（`typebox`、TypeScript strict）。`glimpseui` 为可选能力，运行时探测。
 - **严格质量门禁**：TypeScript strict + Biome + Vitest，任何修改必须三绿通过。
 
 ## 技术栈
@@ -67,7 +66,33 @@ ln -s "$(pwd)" ~/.pi/agent/extensions/xpi-research
 
 | 命令 | 说明 |
 | :--- | :--- |
-| `/xpi-research` | 显示扩展状态与已加载版本提示 |
+| `/xpi-research <目标>` | 为去除首尾空白后的目标启动一轮有界研究 |
+
+## 研究流程
+
+`/xpi-research <目标>` 只在 Agent 空闲时启动。没有目标时，扩展通过
+Pi 原生输入对话框获取目标。取消输入或提交空白内容会显示警告，且不修改
+session 状态。扩展不会拦截普通用户 prompt。
+
+研究轮次中，扩展临时启用 `xpi_research_ask`，并向
+`/skill:xpi-research` 传递目标。技能只针对影响结果的未决选择调用该工具。
+工具把有界的结构化答案返回当前 Agent；取消具有明确状态，不包含部分答案。
+
+- **Quick**：简单的单选和文本问题按顺序使用 Pi 原生 `select` 与 `input`。
+- **Visual**：多选、信息、预览或显式 visual 提示使用富呈现路径。宿主提供
+  `glimpseui` 时，visual 问卷使用一次 Glimpse `prompt()` 面板；不可用时，
+  TUI 使用 Pi 原生 custom component，RPC 使用 Pi 原生基础对话框并以纯文本
+  展示详情。
+- **无 UI**：print 与 JSON 模式明确返回取消，不阻塞也不伪造答案。Glimpse
+  加载或 prompt 失败时通知用户并使用原生 fallback。
+
+Esc、关闭面板或取消原生对话框都会返回 `cancelled: true` 与空答案对象。必答
+问题会保持可修正，直到用户提交有效答案。Agent 稳定完成或 session 关闭后，
+扩展恢复本轮开始前的完整 active tool 列表并清除状态。
+
+MVP 只在当前 Pi session 的内存中保存研究状态，不提供数据库、跨 session 恢复、
+项目配置、独立模型调用或内置 GitHub 研究客户端。已有方法论技能保持独立，
+需要时按名称复用。
 
 ## 开发命令
 
@@ -85,7 +110,8 @@ ln -s "$(pwd)" ~/.pi/agent/extensions/xpi-research
 .
 ├── mise.toml / package.json / biome.jsonc / tsconfig.json / pnpm-workspace.yaml
 ├── AGENTS.md / CONTEXT.md / DESIGN.md
-├── docs/                      # Git 工作流与仓库约束
+├── docs/                      # Git 工作流、决策记录与仓库约束
+├── skills/xpi-research/       # 随包发布的研究编排技能
 └── src/
     └── index.ts               # 扩展入口 (register 函数)
 ```

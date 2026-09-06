@@ -6,7 +6,7 @@
 
 > No build step. Direct TypeScript source execution. Strict quality gates.
 
-[Quickstart](#quickstart) · [Commands](#commands) · [Development](#development) · [Directory structure](#directory-structure) · [Design baseline](#design-baseline)
+[Quickstart](#quickstart) · [Research flow](#research-flow) · [Commands](#commands) · [Development](#development) · [Directory structure](#directory-structure) · [Design baseline](#design-baseline)
 
 ---
 
@@ -18,7 +18,7 @@ Design principles:
 
 - **No build step** — Pi loads `./src/index.ts` directly; no compilation artifacts (`dist/` or bundles) are committed.
 - **Pi-native UI** — Uses `ctx.ui.*` and `@earendil-works/pi-tui` for rendering; never hijacks the terminal or installs conflicting terminal frameworks.
-- **Zero heavy runtime dependencies** — Relies on host-provided APIs with strict type safety (`@sinclair/typebox`, TypeScript strict).
+- **Zero heavy runtime dependencies** — Relies on host-provided APIs with strict type safety (`typebox`, TypeScript strict). `glimpseui` is optional and detected at runtime.
 - **Strict quality gates** — TypeScript strict + Biome + Vitest; all three checks must pass before any commit.
 
 ## Tech stack
@@ -67,7 +67,41 @@ Inside a running Pi session, use `/reload` to hot-reload the extension.
 
 | Command | Description |
 | :--- | :--- |
-| `/xpi-research` | Display the extension status and version notification |
+| `/xpi-research <target>` | Start one bounded research round for the trimmed target |
+
+## Research flow
+
+`/xpi-research <target>` starts only when the Agent is idle. With no target,
+the extension asks for one through a native input dialog. Cancelling or
+submitting whitespace shows a warning and leaves the session unchanged. The
+extension does not intercept ordinary user prompts.
+
+During the round, the extension temporarily enables `xpi_research_ask` and
+passes the target to `/skill:xpi-research`. The skill uses it only for
+unresolved decisions that affect the result. The tool returns bounded,
+structured answers to the current Agent turn; cancellation is explicit and
+contains no partial answers.
+
+- **Quick**: simple single-choice and text questions use sequential Pi-native
+  `select` and `input` dialogs.
+- **Visual**: multi-select, information, previews, or an explicit visual hint
+  use the richer presentation path. When `glimpseui` is available, a visual
+  questionnaire uses one Glimpse `prompt()` panel. Without it, TUI uses a
+  native custom component and RPC uses primitive Pi dialogs with plain-text
+  details.
+- **No UI**: print and JSON modes cancel explicitly instead of blocking or
+  fabricating answers. Glimpse load or prompt failures notify and use the
+  native fallback.
+
+Esc, closing a panel, or cancelling a native dialog returns `cancelled: true`
+with an empty answer object. Required questions remain answerable until the
+user submits a valid value. After settlement or session shutdown, the exact
+pre-round active tool list is restored and the status is cleared.
+
+The MVP keeps research state in memory for the current Pi session only. It has
+no database, cross-session recovery, project configuration, independent model
+calls, or built-in GitHub research client. Existing methodology skills remain
+separate and are reused by name when appropriate.
 
 ## Development
 
@@ -85,7 +119,8 @@ All three gates (`typecheck`, `lint`, `test`) must pass before committing.
 .
 ├── mise.toml / package.json / biome.jsonc / tsconfig.json / pnpm-workspace.yaml
 ├── AGENTS.md / CONTEXT.md / DESIGN.md
-├── docs/                      # Git workflow and repository guardrails
+├── docs/                      # Git workflow, decisions, and guardrails
+├── skills/xpi-research/       # Packaged research orchestration skill
 └── src/
     └── index.ts               # Extension entrypoint (register function)
 ```
