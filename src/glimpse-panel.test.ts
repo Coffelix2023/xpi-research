@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { GLIMPSE_PANEL_SCRIPT, renderGlimpseQuestionnaire } from "./glimpse-panel.ts";
+import {
+  GLIMPSE_PANEL_CSS,
+  GLIMPSE_PANEL_SCRIPT,
+  GLIMPSE_PANEL_TEXT,
+  renderGlimpseQuestionnaire,
+} from "./glimpse-panel.ts";
 import type { Questionnaire } from "./types.ts";
 
 const questionnaire: Questionnaire = {
@@ -66,6 +71,21 @@ function executableScript(html: string): string {
   return html.slice(index);
 }
 
+const SANS_FALLBACK = /sans-serif$/;
+const MONO_FALLBACK = /monospace$/;
+
+function declarations(css: string, selector: string): Record<string, string> {
+  const match = new RegExp(`${selector}\\s*\\{([\\s\\S]*?)\\n\\}`).exec(css);
+  if (!match) throw new Error(`missing token block: ${selector}`);
+  const tokens: Record<string, string> = {};
+  for (const entry of match[1].split(";")) {
+    const separator = entry.indexOf(":");
+    if (separator < 0) continue;
+    const name = entry.slice(0, separator).trim();
+    if (name.startsWith("--")) tokens[name] = entry.slice(separator + 1).trim();
+  }
+  return tokens;
+}
 describe("renderGlimpseQuestionnaire", () => {
   it("embeds the questionnaire as parseable non-executable json", () => {
     const html = renderGlimpseQuestionnaire(questionnaire, 5);
@@ -101,5 +121,85 @@ describe("renderGlimpseQuestionnaire", () => {
 
     expect(html).not.toContain("</script><script>alert(1)</script>");
     expect(html).toContain("\\u003c/script\\u003e");
+  });
+});
+
+describe("panel tokens", () => {
+  const light = declarations(GLIMPSE_PANEL_CSS, ":root");
+  const dark = declarations(GLIMPSE_PANEL_CSS, '\\[data-theme="dark"\\]');
+
+  it("ships a light and a dark token set", () => {
+    expect(Object.keys(light).length).toBeGreaterThan(10);
+    expect(dark["--primary"]).toBeTruthy();
+    expect(dark["--primary"]).not.toBe(light["--primary"]);
+  });
+
+  it("only overrides known tokens in the dark set", () => {
+    for (const name of Object.keys(dark)) {
+      expect(light, `dark token ${name} has no light counterpart`).toHaveProperty(name);
+    }
+  });
+
+  it("keeps font stacks falling back to a generic family", () => {
+    expect(light["--font-sans"]).toMatch(SANS_FALLBACK);
+    expect(light["--font-mono"]).toMatch(MONO_FALLBACK);
+    expect(light["--radius-md"]).toContain("var(--radius)");
+  });
+
+  it("uses tokens instead of color literals", () => {
+    expect(GLIMPSE_PANEL_CSS).not.toContain("#");
+    expect(GLIMPSE_PANEL_CSS).not.toContain("rgb(");
+    const dotRule = GLIMPSE_PANEL_CSS.slice(GLIMPSE_PANEL_CSS.indexOf(".gd-dot {"));
+    expect(dotRule).toContain("background: var(--muted)");
+    expect(dotRule).toContain("border: 1px solid var(--border)");
+  });
+});
+
+describe("panel text dictionary", () => {
+  it("declares the same keys in both locales", () => {
+    const zh = Object.keys(GLIMPSE_PANEL_TEXT.zh).sort();
+    const en = Object.keys(GLIMPSE_PANEL_TEXT.en).sort();
+    expect(en).toEqual(zh);
+    expect(zh.length).toBeGreaterThan(20);
+  });
+
+  it("is the only source of interface copy in the panel script", () => {
+    const script = GLIMPSE_PANEL_SCRIPT.replace(JSON.stringify(GLIMPSE_PANEL_TEXT), "");
+    expect(script).toContain("function t(key, vars)");
+    for (const copy of [
+      GLIMPSE_PANEL_TEXT.en.cancel,
+      GLIMPSE_PANEL_TEXT.en.submit,
+      GLIMPSE_PANEL_TEXT.zh.next,
+      GLIMPSE_PANEL_TEXT.zh.prev,
+    ]) {
+      expect(script).not.toContain(`"${copy}"`);
+    }
+  });
+});
+
+describe("panel navigation shell", () => {
+  it("renders the step bar and footer controls", () => {
+    const html = renderGlimpseQuestionnaire(questionnaire, 5);
+
+    for (const id of [
+      "step-count",
+      "dots",
+      "step-meta",
+      "track-fill",
+      "hints",
+      "b-prev",
+      "b-cancel",
+      "b-submit",
+    ]) {
+      expect(html).toContain(`id="${id}"`);
+    }
+  });
+
+  it("wires the documented keyboard shortcuts", () => {
+    expect(GLIMPSE_PANEL_SCRIPT).toContain('event.key === "Escape"');
+    expect(GLIMPSE_PANEL_SCRIPT).toContain('event.key === "Enter"');
+    expect(GLIMPSE_PANEL_SCRIPT).toContain("event.metaKey || event.ctrlKey");
+    expect(GLIMPSE_PANEL_SCRIPT).toContain('getElementById("b-submit")');
+    expect(GLIMPSE_PANEL_SCRIPT).toContain('getElementById("dots")');
   });
 });
