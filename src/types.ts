@@ -51,6 +51,7 @@ export type RawAnswers = Record<string, unknown>;
 export interface QuestionnaireResult {
   answers: Answers;
   cancelled: boolean;
+  feedback?: string;
   round: number;
 }
 

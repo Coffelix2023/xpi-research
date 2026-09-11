@@ -19,6 +19,7 @@ const MAX_PROMPT_LENGTH = 1_000;
 const MAX_LABEL_LENGTH = 160;
 const MAX_DESCRIPTION_LENGTH = 500;
 const MAX_PREVIEW_LENGTH = 4_000;
+const MAX_ANSWER_LENGTH = 2_000;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -220,6 +221,15 @@ function invalidAnswer(question: QuestionnaireQuestion): never {
   throw new Error(`invalid answer for question: ${question.id}`);
 }
 
+/** Trim a free-form answer and enforce the shared length cap. */
+function boundedText(value: string): string | undefined {
+  const text = value.trim();
+  if (text.length === 0) return undefined;
+  if (characterLength(text) > MAX_ANSWER_LENGTH) {
+    throw new Error(`answer exceeds ${MAX_ANSWER_LENGTH} characters`);
+  }
+  return text;
+}
 function normalizedAnswer(
   question: QuestionnaireQuestion,
   value: unknown,
@@ -227,30 +237,53 @@ function normalizedAnswer(
   if (question.type === "info") return undefined;
 
   if (question.type === "single") {
-    if (typeof value !== "string" || !answerLabels(question).has(value)) {
-      return invalidAnswer(question);
-    }
-    return value;
+    if (typeof value !== "string") return invalidAnswer(question);
+    if (answerLabels(question).has(value)) return value;
+    return boundedText(value);
   }
 
   if (question.type === "multi") {
     if (!Array.isArray(value)) return invalidAnswer(question);
     const labels = answerLabels(question);
-    if (value.some((item) => typeof item !== "string" || !labels.has(item))) {
-      return invalidAnswer(question);
+    const selected = new Set<string>();
+    const extras = new Set<string>();
+    for (const item of value) {
+      if (typeof item !== "string") return invalidAnswer(question);
+      if (labels.has(item)) {
+        selected.add(item);
+        continue;
+      }
+      const text = item.trim();
+      if (text.length === 0) continue;
+      extras.add(text);
     }
-    const selected = new Set(value);
+    // At most one custom entry may accompany the selected option labels.
+    if (extras.size > 1) return invalidAnswer(question);
+    for (const extra of extras) {
+      if (characterLength(extra) > MAX_ANSWER_LENGTH) {
+        throw new Error(`answer exceeds ${MAX_ANSWER_LENGTH} characters`);
+      }
+    }
     const ordered = question.options
       .map((option) => option.label)
       .filter((label) => selected.has(label));
-    return ordered.length > 0 ? ordered : undefined;
+    return ordered.length + extras.size > 0
+      ? [
+          ...ordered,
+          ...extras,
+        ]
+      : undefined;
   }
 
   if (typeof value !== "string") return invalidAnswer(question);
-  const text = value.trim();
-  if (text.length === 0) return undefined;
-  if (characterLength(text) > 2_000) throw new Error("answer exceeds 2000 characters");
-  return text;
+  return boundedText(value);
+}
+
+/** Review feedback travels beside the answer map, never inside it. */
+function normalizedFeedback(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string") throw new Error("feedback must be a string");
+  return boundedText(value);
 }
 
 function ensureResultSize(result: QuestionnaireResult): QuestionnaireResult {
@@ -263,6 +296,7 @@ export function normalizeAnswers(
   questionnaire: Questionnaire,
   rawAnswers: RawAnswers,
   round: number,
+  rawFeedback?: unknown,
 ): QuestionnaireResult {
   const answers: Answers = {};
   for (const question of questionnaire.questions) {
@@ -282,13 +316,15 @@ export function normalizeAnswers(
     }
     answers[question.id] = answer;
   }
-  return ensureResultSize({
+  const result: QuestionnaireResult = {
     cancelled: false,
     round,
     answers,
-  });
+  };
+  const feedback = normalizedFeedback(rawFeedback);
+  if (feedback !== undefined) result.feedback = feedback;
+  return ensureResultSize(result);
 }
-
 export function cancelledResult(round: number): QuestionnaireResult {
   return {
     cancelled: true,

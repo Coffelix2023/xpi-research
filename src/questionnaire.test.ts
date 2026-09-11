@@ -508,11 +508,259 @@ describe("validateQuestionnaire", () => {
         multi,
         {
           tools: [
-            "unknown",
+            "unknown-one",
+            "unknown-two",
           ],
         },
         1,
       ),
     ).toThrow("invalid answer");
+  });
+
+  it("accepts a custom answer in place of an option label", () => {
+    const single = validateQuestionnaire({
+      presentation: "quick",
+      questions: [
+        {
+          id: "choice",
+          prompt: "Choose one",
+          required: true,
+          type: "single",
+          options: [
+            option("first"),
+            option("second"),
+          ],
+        },
+      ],
+    });
+
+    expect(
+      normalizeAnswers(
+        single,
+        {
+          choice: "a third way",
+        },
+        3,
+      ),
+    ).toEqual({
+      cancelled: false,
+      round: 3,
+      answers: {
+        choice: "a third way",
+      },
+    });
+    expect(
+      normalizeAnswers(
+        single,
+        {
+          choice: "  padded  ",
+        },
+        3,
+      ).answers.choice,
+    ).toBe("padded");
+  });
+
+  it("appends at most one custom answer after the selected options", () => {
+    const multi = validateQuestionnaire({
+      presentation: "visual",
+      questions: [
+        {
+          id: "tools",
+          prompt: "Choose tools",
+          required: true,
+          type: "multi",
+          options: [
+            option("first"),
+            option("second"),
+            option("third"),
+          ],
+        },
+      ],
+    });
+
+    expect(
+      normalizeAnswers(
+        multi,
+        {
+          tools: [
+            "third",
+            "bespoke",
+            "first",
+          ],
+        },
+        4,
+      ).answers.tools,
+    ).toEqual([
+      "first",
+      "third",
+      "bespoke",
+    ]);
+    expect(
+      normalizeAnswers(
+        multi,
+        {
+          tools: [
+            "bespoke",
+          ],
+        },
+        4,
+      ).answers.tools,
+    ).toEqual([
+      "bespoke",
+    ]);
+    expect(() =>
+      normalizeAnswers(
+        multi,
+        {
+          tools: [
+            "one",
+            "two",
+          ],
+        },
+        4,
+      ),
+    ).toThrow("invalid answer");
+  });
+
+  it("treats an empty custom answer as unanswered", () => {
+    const single = validateQuestionnaire({
+      presentation: "quick",
+      questions: [
+        {
+          id: "choice",
+          prompt: "Choose one",
+          required: true,
+          type: "single",
+          options: [
+            option("first"),
+          ],
+        },
+      ],
+    });
+    const optionalMulti = validateQuestionnaire({
+      presentation: "visual",
+      questions: [
+        {
+          id: "tools",
+          prompt: "Choose tools",
+          required: false,
+          type: "multi",
+          options: [
+            option("first"),
+          ],
+        },
+      ],
+    });
+
+    expect(() =>
+      normalizeAnswers(
+        single,
+        {
+          choice: "   ",
+        },
+        1,
+      ),
+    ).toThrow("required question has no valid answer");
+    expect(
+      normalizeAnswers(
+        optionalMulti,
+        {
+          tools: [
+            "  ",
+          ],
+        },
+        1,
+      ).answers,
+    ).toEqual({});
+  });
+
+  it("rejects an oversized custom answer instead of truncating it", () => {
+    const single = validateQuestionnaire({
+      presentation: "quick",
+      questions: [
+        {
+          id: "choice",
+          prompt: "Choose one",
+          required: false,
+          type: "single",
+          options: [
+            option("first"),
+          ],
+        },
+      ],
+    });
+
+    expect(() =>
+      normalizeAnswers(
+        single,
+        {
+          choice: "x".repeat(2001),
+        },
+        1,
+      ),
+    ).toThrow("answer exceeds 2000");
+  });
+
+  it("carries review feedback beside the answer map", () => {
+    const questionnaire = validateQuestionnaire({
+      presentation: "quick",
+      questions: [
+        singleQuestion(),
+      ],
+    });
+
+    const withFeedback = normalizeAnswers(
+      questionnaire,
+      {
+        choice: "Option",
+      },
+      6,
+      "  needs sharper wording  ",
+    );
+    expect(withFeedback.feedback).toBe("needs sharper wording");
+    expect(withFeedback.answers).toEqual({
+      choice: "Option",
+    });
+
+    expect(
+      normalizeAnswers(
+        questionnaire,
+        {
+          choice: "Option",
+        },
+        6,
+      ),
+    ).not.toHaveProperty("feedback");
+    expect(
+      normalizeAnswers(
+        questionnaire,
+        {
+          choice: "Option",
+        },
+        6,
+        "   ",
+      ),
+    ).not.toHaveProperty("feedback");
+    expect(() =>
+      normalizeAnswers(
+        questionnaire,
+        {
+          choice: "Option",
+        },
+        6,
+        "x".repeat(2001),
+      ),
+    ).toThrow("answer exceeds 2000");
+    expect(() =>
+      normalizeAnswers(
+        questionnaire,
+        {
+          choice: "Option",
+        },
+        6,
+        42,
+      ),
+    ).toThrow("feedback must be a string");
+    expect(cancelledResult(6)).not.toHaveProperty("feedback");
   });
 });

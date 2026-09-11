@@ -25,10 +25,10 @@
 
 ## 4. 契约扩展
 
-- [ ] 4.1 在 `src/types.ts` 的 `QuestionnaireResult` 增加可选 `feedback` 字段；`pnpm typecheck` 通过
-- [ ] 4.2 修改 `src/questionnaire.ts` 的 `normalizedAnswer()`，使单选接受"选项 label 或非空自定义文本"、多选接受"选项 label 子集加最多一个额外文本"，两者共用 2,000 字符上限；在 `src/questionnaire.test.ts` 补充自定义答案用例（单选自定义、多选附加、空文本视为未作答、超长被拒），`pnpm test` 通过
-- [ ] 4.3 在 `normalizeAnswers()` 中接入汇总反馈：非空时写入去空白的 `feedback`，为空时省略该字段，取消结果不包含该字段；在 `src/questionnaire.test.ts` 补充对应用例，`pnpm test` 通过
-- [ ] 4.4 确认契约扩展未影响既有路径：`src/ui.test.ts` 与 `src/index.test.ts` 无需修改即可通过，且 RPC 与 quick 路径的既有断言保持有效
+- [x] 4.1 在 `src/types.ts` 的 `QuestionnaireResult` 增加可选 `feedback` 字段；`pnpm typecheck` 通过
+- [x] 4.2 修改 `src/questionnaire.ts` 的 `normalizedAnswer()`，使单选接受"选项 label 或非空自定义文本"、多选接受"选项 label 子集加最多一个额外文本"，两者共用 2,000 字符上限；在 `src/questionnaire.test.ts` 补充自定义答案用例（单选自定义、多选附加、空文本视为未作答、超长被拒），`pnpm test` 通过
+- [x] 4.3 在 `normalizeAnswers()` 中接入汇总反馈：非空时写入去空白的 `feedback`，为空时省略该字段，取消结果不包含该字段；在 `src/questionnaire.test.ts` 补充对应用例，`pnpm test` 通过
+- [x] 4.4 确认契约扩展未影响既有路径：`src/ui.test.ts` 与 `src/index.test.ts` 无需修改即可通过，且 RPC 与 quick 路径的既有断言保持有效
 
 ## 5. 文档同步
 
