@@ -34,6 +34,7 @@
 
 - [x] 5.1 更新 `DESIGN.md`：记录两套语义令牌的来源与映射关系、面板默认分步的交互契约、以及"不加载 webfont、字体走回退"这一事实；用 `pnpm -w run lint` 确认文档改动不引入格式问题
 - [x] 5.2 更新 `skills/xpi-research/SKILL.md`：说明面板提供自定义答案与汇总确认步骤，`feedback` 与 `answers` 的读法差异，以及因自定义答案存在、单选/多选答案可能不是任何选项 label；确认技能文档中不再存在与之冲突的表述
+- [x] 5.3 同步双语 README 的呈现说明：分步面板、选项卡片、自定义入口、汇总页与 `feedback` 字段的读法。验证：`README.md` 与 `README.zh-CN.md` 的「研究流程」章节均已更新，且不再与 `questionnaire-contract` 的答案形状冲突
 
 ## 6. 端到端验收与交付
 
