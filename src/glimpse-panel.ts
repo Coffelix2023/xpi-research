@@ -1,3 +1,4 @@
+// biome-ignore-all lint/security/noSecrets: the panel ships Chinese interface copy, which trips the entropy heuristic.
 import type { Questionnaire } from "./types.ts";
 
 /**
@@ -11,6 +12,7 @@ interface GlimpsePanelText {
   badgeOptional: string;
   badgeRecommended: string;
   badgeRequired: string;
+  bridgeMissing: string;
   cancel: string;
   confirm: string;
   customPlaceholder: string;
@@ -40,12 +42,19 @@ interface GlimpsePanelText {
   submit: string;
   textPlaceholder: string;
   textPlaceholderOptional: string;
+  themeTitle: string;
   typeInfo: string;
   typeMulti: string;
   typeSingle: string;
   typeText: string;
   variant: string;
   variantTitle: string;
+  zoomIn: string;
+  zoomInTitle: string;
+  zoomOut: string;
+  zoomOutTitle: string;
+  zoomReset: string;
+  zoomResetTitle: string;
 }
 
 export const GLIMPSE_PANEL_TEXT = {
@@ -55,6 +64,7 @@ export const GLIMPSE_PANEL_TEXT = {
     badgeOptional: "optional",
     badgeRecommended: "recommended",
     badgeRequired: "required",
+    bridgeMissing: "Could not deliver this result. Close the window and retry.",
     cancel: "Cancel",
     confirm: "Confirm",
     customPlaceholder: "Type your own answer…",
@@ -76,12 +86,19 @@ export const GLIMPSE_PANEL_TEXT = {
     submit: "Submit",
     textPlaceholder: "Type your answer…",
     textPlaceholderOptional: "Optional",
+    themeTitle: "Toggle dark / light",
     typeInfo: "info",
     typeMulti: "multiple",
     typeSingle: "single",
     typeText: "text",
     variant: "Stacked",
     variantTitle: "Switch to stacked layout",
+    zoomIn: "A+",
+    zoomInTitle: "Zoom in",
+    zoomOut: "A−",
+    zoomOutTitle: "Zoom out",
+    zoomReset: "⟲",
+    zoomResetTitle: "Reset zoom",
     hintStack: [
       [
         "tab",
@@ -117,6 +134,7 @@ export const GLIMPSE_PANEL_TEXT = {
     badgeOptional: "可留空",
     badgeRecommended: "推荐",
     badgeRequired: "必答",
+    bridgeMissing: "无法回传结果。请关闭窗口后重试。",
     cancel: "取消",
     confirm: "确认",
     customPlaceholder: "输入你的答案…",
@@ -131,7 +149,6 @@ export const GLIMPSE_PANEL_TEXT = {
     reviewCount: "确认 / {n}",
     reviewFeedback: "还有别的补充吗?",
     reviewFeedbackPlaceholder: "可留空",
-    // biome-ignore lint/security/noSecrets: Chinese interface copy, not a credential.
     reviewLead: "下面是你的全部答案。点任意一条可以回到该题修改。",
     round: "第 {n} 轮",
     stepMode: "分步",
@@ -139,12 +156,19 @@ export const GLIMPSE_PANEL_TEXT = {
     submit: "提交",
     textPlaceholder: "输入你的回答…",
     textPlaceholderOptional: "可留空",
+    themeTitle: "切换暗色 / 亮色",
     typeInfo: "说明",
     typeMulti: "多选",
     typeSingle: "单选",
     typeText: "文本",
     variant: "单页",
     variantTitle: "切换为单页布局",
+    zoomIn: "A+",
+    zoomInTitle: "放大",
+    zoomOut: "A−",
+    zoomOutTitle: "缩小",
+    zoomReset: "⟲",
+    zoomResetTitle: "重置缩放",
     hintStack: [
       [
         "tab",
@@ -204,7 +228,6 @@ export const GLIMPSE_PANEL_CSS = `:root {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
   --dur: 140ms;
   --ease: cubic-bezier(.25, .1, .25, 1);
 }
@@ -226,6 +249,7 @@ export const GLIMPSE_PANEL_CSS = `:root {
   --popover-foreground: oklch(0.9211 0.004 106.4781);
 }
 [data-theme="light"] { color-scheme: light; }
+[data-contrast="true"] { --muted-foreground: var(--foreground); --border: currentColor; }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
@@ -258,6 +282,7 @@ input, textarea { -webkit-user-select: text; user-select: text; font: inherit; }
   border-bottom: 1px solid var(--border);
 }
 .gd-title { font-weight: 700; letter-spacing: .01em; }
+.gd-spacer { flex: 1; }
 .chip {
   flex: none;
   padding: 2px 8px;
@@ -267,6 +292,21 @@ input, textarea { -webkit-user-select: text; user-select: text; font: inherit; }
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
 }
+.gd-toolbtn {
+  flex: none;
+  min-width: 30px;
+  height: 26px;
+  padding: 0 9px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.gd-toolbtn:hover { background: var(--accent); color: var(--accent-foreground); }
 .gd-stepbar {
   flex: none;
   position: relative;
@@ -298,6 +338,130 @@ input, textarea { -webkit-user-select: text; user-select: text; font: inherit; }
 .gd-track i { display: block; width: 0; height: 100%; background: var(--primary); transition: width var(--dur) var(--ease); }
 .gd-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 20px; }
 .gd-inner { max-width: 660px; margin: 0 auto; min-height: 100%; }
+
+.q { padding-bottom: 20px; }
+.q + .q { padding-top: 20px; border-top: 1px solid var(--border); }
+.q-head { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; flex-wrap: wrap; }
+.q-num {
+  flex: none;
+  padding: 1px 7px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--primary-foreground);
+  background: var(--primary);
+  border-radius: var(--radius-sm);
+}
+.badge {
+  flex: none;
+  padding: 1px 7px;
+  font-size: 11.5px;
+  color: var(--muted-foreground);
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.badge.req { color: var(--destructive); border-color: color-mix(in srgb, var(--destructive) 50%, transparent); }
+.badge.rec { color: var(--primary); border-color: color-mix(in srgb, var(--primary) 50%, transparent); }
+.q-prompt { font-size: 15px; font-weight: 650; line-height: 1.5; white-space: pre-wrap; }
+.q-note {
+  margin-top: 12px;
+  padding: 11px 13px;
+  color: var(--muted-foreground);
+  white-space: pre-wrap;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.q-err { display: none; margin-top: 9px; font-size: 12.5px; color: var(--destructive); }
+.q.err .q-err { display: block; }
+.q.err .opt, .q.err .q-input { border-color: var(--destructive); }
+
+.opts { display: flex; flex-direction: column; gap: 7px; margin-top: 12px; }
+.opt {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 0 11px;
+  padding: 11px 13px;
+  cursor: pointer;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.opt:hover { background: var(--accent); }
+.opt input { align-self: start; width: 16px; height: 16px; margin-top: 3px; accent-color: var(--primary); cursor: pointer; }
+.opt:has(input:checked) {
+  background: color-mix(in srgb, var(--primary) 16%, var(--muted));
+  border-color: var(--primary);
+}
+.opt-body { min-width: 0; }
+.opt-title { display: block; font-weight: 550; white-space: pre-wrap; overflow-wrap: anywhere; }
+.opt-title .badge { margin-left: 6px; vertical-align: 1px; }
+.opt-desc { margin-top: 4px; font-size: 12.5px; color: var(--muted-foreground); white-space: pre-wrap; overflow-wrap: anywhere; }
+.opt-prev {
+  margin-top: 7px;
+  padding: 9px 11px;
+  max-height: 220px;
+  overflow: auto;
+  font: 12px/1.5 var(--font-mono);
+  color: var(--muted-foreground);
+  white-space: pre-wrap;
+  background: color-mix(in srgb, var(--background) 70%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.opt.is-custom .opt-title { color: var(--muted-foreground); font-weight: 500; }
+.custom-wrap { display: none; margin: 7px 0 1px; }
+.opt.is-custom:has(input:checked) + .custom-wrap { display: block; }
+.q-input, .custom-input {
+  width: 100%;
+  padding: 10px 12px;
+  resize: vertical;
+  color: var(--foreground);
+  background: var(--muted);
+  border: 1px solid var(--input);
+  border-radius: var(--radius-md);
+  line-height: 1.55;
+}
+.custom-input { font-size: 13px; }
+.q-input { margin-top: 12px; }
+.q-input::placeholder, .custom-input::placeholder { color: var(--muted-foreground); }
+
+.review-ask { margin-top: 18px; font-size: 13.5px; font-weight: 650; }
+.review-list { display: flex; flex-direction: column; gap: 7px; margin-top: 12px; }
+.thumb {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  gap: 0 11px;
+  width: 100%;
+  padding: 10px 12px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.thumb:hover { background: var(--accent); }
+.thumb-no {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted-foreground);
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+.thumb-q { overflow: hidden; font-size: 12px; color: var(--muted-foreground); text-overflow: ellipsis; white-space: nowrap; }
+.thumb-a { font-size: 13.5px; font-weight: 550; white-space: pre-wrap; overflow-wrap: anywhere; }
+.thumb-a.empty { font-weight: 400; font-style: italic; color: var(--muted-foreground); }
+
 .gd-footer {
   flex: none;
   display: flex;
@@ -310,9 +474,10 @@ input, textarea { -webkit-user-select: text; user-select: text; font: inherit; }
   backdrop-filter: blur(24px);
 }
 .hints { flex: 1; font-size: 12px; color: var(--muted-foreground); }
+.hints[data-state="error"] { color: var(--destructive); }
 kbd {
-  font: 11.5px var(--font-mono);
   padding: 2px 6px;
+  font: 11.5px var(--font-mono);
   color: var(--foreground);
   background: var(--muted);
   border: 1px solid var(--border);
@@ -333,24 +498,15 @@ kbd {
 .btn-primary { color: var(--primary-foreground); background: var(--primary); border-color: transparent; }
 .btn-primary:hover { color: var(--primary-foreground); background: var(--primary); filter: brightness(1.08); }
 .btn.hidden { display: none; }
-fieldset { border: 0; margin: 0; padding: 0; }
-legend { font-size: 15px; font-weight: 650; line-height: 1.5; margin-bottom: 12px; white-space: pre-wrap; }
-label, p { display: block; margin: 8px 0; white-space: pre-wrap; }
-textarea, input:not([type="radio"]):not([type="checkbox"]) {
-  width: 100%;
-  padding: 10px 12px;
-  color: var(--foreground);
-  background: var(--muted);
-  border: 1px solid var(--input);
-  border-radius: var(--radius-md);
-}
-.preview { color: var(--muted-foreground); }
-.q-err { display: none; margin-top: 9px; font-size: 12.5px; color: var(--destructive); }
-.q.err .q-err { display: block; }`;
+
+[data-reduce-motion="true"] * { animation: none !important; transition: none !important; }`;
 
 const PANEL_SCRIPT_BODY = `(() => {
   const UI_TEXT = __UI_TEXT__;
   let lang = "zh";
+  let themeOverridden = false;
+  let zoom = 1;
+
   function t(key, vars) {
     const value = UI_TEXT[lang][key];
     if (typeof value !== "string") return value;
@@ -362,7 +518,9 @@ const PANEL_SCRIPT_BODY = `(() => {
   const data = JSON.parse(document.getElementById("xpi-research-data").textContent);
   const QUESTIONS = data.questionnaire.questions;
   const ANSWERABLE = QUESTIONS.filter((question) => question.type !== "info");
-  const state = { page: 0, answers: {} };
+  const REVIEW_INDEX = QUESTIONS.length;
+  const TOTAL_PAGES = QUESTIONS.length + 1;
+  const state = { page: 0, variant: "step", answers: {}, drafts: {}, feedback: "", error: "" };
   const inner = document.getElementById("inner");
 
   function el(tag, cls, text) {
@@ -371,11 +529,25 @@ const PANEL_SCRIPT_BODY = `(() => {
     if (text != null) node.textContent = text;
     return node;
   }
+
+  function typeLabel(type) {
+    if (type === "single") return t("typeSingle");
+    if (type === "multi") return t("typeMulti");
+    if (type === "text") return t("typeText");
+    return t("typeInfo");
+  }
+
+  function draftOf(question) {
+    const draft = state.drafts[question.id];
+    return typeof draft === "string" ? draft.trim() : "";
+  }
+
   function isAnswered(question) {
     const value = state.answers[question.id];
     if (question.type === "multi") return Array.isArray(value) && value.length > 0;
     return typeof value === "string" && value.trim().length > 0;
   }
+
   function setAnswer(question, value) {
     const empty = Array.isArray(value)
       ? value.length === 0
@@ -384,71 +556,202 @@ const PANEL_SCRIPT_BODY = `(() => {
     else state.answers[question.id] = value;
   }
 
-  function questionSection(question) {
+  function hasCustom(question) {
+    return question.type === "single" || question.type === "multi";
+  }
+
+  /** Single source of truth for the option set plus the custom draft. */
+  function recompute(question) {
+    if (!hasCustom(question)) return;
+    const box = questionSection(question.id);
+    if (!box) return;
+    const custom = box.querySelector(".opt.is-custom input");
+    const selected = [...box.querySelectorAll(".opt:not(.is-custom) input:checked")].map(
+      (node) => node.value,
+    );
+    const draft = draftOf(question);
+    if (question.type === "single") {
+      setAnswer(question, custom && custom.checked ? draft : selected[0]);
+      return;
+    }
+    const answers = selected.slice();
+    if (custom && custom.checked && draft !== "") answers.push(draft);
+    setAnswer(question, answers);
+  }
+
+  function questionSection(questionId) {
+    return inner.querySelector('.q[data-qid="' + questionId + '"]');
+  }
+
+  function optionNode(question, option) {
+    const wrap = el("label", "opt");
+    const input = document.createElement("input");
+    input.type = question.type === "multi" ? "checkbox" : "radio";
+    input.name = question.id;
+    input.value = option.label;
+    const saved = state.answers[question.id];
+    input.checked =
+      question.type === "multi"
+        ? Array.isArray(saved) && saved.includes(option.label)
+        : saved === option.label;
+
+    const body = el("span", "opt-body");
+    const title = el("span", "opt-title", option.label);
+    if (option.recommended) title.append(el("span", "badge rec", t("badgeRecommended")));
+    body.append(title);
+    if (option.description) body.append(el("p", "opt-desc", option.description));
+    if (option.preview) body.append(el("pre", "opt-prev", option.preview));
+    wrap.append(input, body);
+    return wrap;
+  }
+
+  function customNodes(question) {
+    const draft = draftOf(question);
+    const saved = state.answers[question.id];
+    const active =
+      question.type === "multi"
+        ? Array.isArray(saved) && draft !== "" && saved.includes(draft)
+        : saved === draft && draft !== "";
+
+    const wrap = el("label", "opt is-custom");
+    const input = document.createElement("input");
+    input.type = question.type === "multi" ? "checkbox" : "radio";
+    input.name = question.id;
+    input.value = "__custom";
+    input.checked = active;
+    const body = el("span", "opt-body");
+    body.append(el("span", "opt-title", t("customTitle")));
+    wrap.append(input, body);
+
+    const box = el("div", "custom-wrap");
+    const area = document.createElement("textarea");
+    area.className = "custom-input";
+    area.rows = 2;
+    area.placeholder = t("customPlaceholder");
+    area.value = draft;
+    area.setAttribute("aria-label", t("customTitle") + " " + question.prompt);
+    box.append(area);
+    return [wrap, box];
+  }
+
+  function questionNode(question, order) {
     const section = el("section", "q");
     section.dataset.qid = question.id;
-    const fieldset = document.createElement("fieldset");
-    const legend = document.createElement("legend");
-    legend.textContent = question.prompt;
-    fieldset.append(legend);
-    if (question.type === "info") {
-      fieldset.append(el("p", "q-note", question.prompt));
-    } else if (question.type === "text") {
-      const input = document.createElement("textarea");
-      input.name = question.id;
-      input.rows = 3;
-      input.placeholder = question.required ? t("textPlaceholder") : t("textPlaceholderOptional");
-      input.value = typeof state.answers[question.id] === "string" ? state.answers[question.id] : "";
-      fieldset.append(input);
-    } else {
-      for (const option of question.options) {
-        const label = document.createElement("label");
-        const input = document.createElement("input");
-        input.type = question.type === "multi" ? "checkbox" : "radio";
-        input.name = question.id;
-        input.value = option.label;
-        const saved = state.answers[question.id];
-        input.checked =
-          question.type === "multi"
-            ? Array.isArray(saved) && saved.includes(option.label)
-            : saved === option.label;
-        label.append(input, document.createTextNode(" " + option.label));
-        if (option.description) label.append(el("span", "preview", option.description));
-        if (option.preview) label.append(el("p", "preview", option.preview));
-        fieldset.append(label);
-      }
+
+    const head = el("div", "q-head");
+    head.append(el("span", "q-num", "Q" + order), el("span", "badge", typeLabel(question.type)));
+    if (question.type !== "info") {
+      head.append(
+        el(
+          "span",
+          "badge" + (question.required ? " req" : ""),
+          question.required ? t("badgeRequired") : t("badgeOptional"),
+        ),
+      );
     }
-    section.append(fieldset, el("p", "q-err", t("errorRequired")));
+    section.append(head);
+
+    if (question.type === "info") {
+      section.append(el("p", "q-note", question.prompt));
+      return section;
+    }
+
+    section.append(el("p", "q-prompt", question.prompt));
+    if (question.type === "text") {
+      const area = document.createElement("textarea");
+      area.className = "q-input";
+      area.name = question.id;
+      area.rows = 3;
+      area.placeholder = question.required ? t("textPlaceholder") : t("textPlaceholderOptional");
+      area.value = typeof state.answers[question.id] === "string" ? state.answers[question.id] : "";
+      section.append(area);
+    } else {
+      const list = el("div", "opts");
+      for (const option of question.options) list.append(optionNode(question, option));
+      for (const node of customNodes(question)) list.append(node);
+      section.append(list);
+    }
+    section.append(el("p", "q-err", state.error === question.id ? t("errorRequired") : ""));
+    if (state.error === question.id) section.classList.add("err");
     return section;
   }
 
-  function readStep() {
-    const question = QUESTIONS[state.page];
-    if (!question || question.type === "info") return;
-    if (question.type === "text") {
-      const area = inner.querySelector("textarea[name='" + question.id + "']");
-      if (area) setAnswer(question, area.value);
-      return;
+  function thumbNode(question, order) {
+    const button = el("button", "thumb");
+    button.type = "button";
+    button.dataset.goto = String(QUESTIONS.indexOf(question));
+    button.append(el("span", "thumb-no", "Q" + order), el("span", "thumb-q", question.prompt));
+    if (question.type === "info") {
+      button.append(el("span", "thumb-a empty", typeLabel(question.type)));
+      return button;
     }
-    const checked = [...inner.querySelectorAll("input[name='" + question.id + "']:checked")].map(
-      (node) => node.value,
+    const value = state.answers[question.id];
+    const text = Array.isArray(value) ? value.join(" · ") : value;
+    const answered = isAnswered(question);
+    button.append(
+      el("span", "thumb-a" + (answered ? "" : " empty"), answered ? text : t("emptyAnswer")),
     );
-    setAnswer(question, question.type === "multi" ? checked : checked[0]);
+    return button;
+  }
+
+  function reviewNode() {
+    const section = el("section", "q q-review");
+    const head = el("div", "q-head");
+    head.append(el("span", "q-num", "✓"), el("span", "badge", t("reviewCount", { n: TOTAL_PAGES })));
+    section.append(head, el("p", "q-prompt", t("reviewLead")));
+
+    const list = el("div", "review-list");
+    QUESTIONS.forEach((question, index) => list.append(thumbNode(question, index + 1)));
+    section.append(list, el("p", "review-ask", t("reviewFeedback")));
+
+    const area = document.createElement("textarea");
+    area.className = "q-input";
+    area.id = "review-feedback";
+    area.rows = 3;
+    area.placeholder = t("reviewFeedbackPlaceholder");
+    area.value = state.feedback;
+    section.append(area);
+    return section;
   }
 
   function render() {
     inner.textContent = "";
-    const question = QUESTIONS[state.page];
-    if (question) inner.append(questionSection(question));
+    if (state.variant === "stack") {
+      QUESTIONS.forEach((question, index) => inner.append(questionNode(question, index + 1)));
+      inner.append(reviewNode());
+    } else {
+      inner.append(
+        state.page === REVIEW_INDEX ? reviewNode() : questionNode(QUESTIONS[state.page], state.page + 1),
+      );
+    }
+    syncChrome();
     syncStepbar();
     syncFooter();
   }
 
+  function syncChrome() {
+    document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+    document.getElementById("round-chip").textContent = t("round", { n: data.round });
+    const langButton = document.getElementById("t-lang");
+    langButton.textContent = t("lang");
+    langButton.title = t("langTitle");
+    const variantButton = document.getElementById("t-variant");
+    variantButton.textContent = state.variant === "step" ? t("variant") : t("stepMode");
+    variantButton.title = t("variantTitle");
+    document.getElementById("t-theme").title = t("themeTitle");
+    document.getElementById("t-zoom-in").textContent = t("zoomIn");
+    document.getElementById("t-zoom-in").title = t("zoomInTitle");
+    document.getElementById("t-zoom-out").textContent = t("zoomOut");
+    document.getElementById("t-zoom-out").title = t("zoomOutTitle");
+    document.getElementById("t-zoom-reset").textContent = t("zoomReset");
+    document.getElementById("t-zoom-reset").title = t("zoomResetTitle");
+  }
+
   function syncStepbar() {
-    document.getElementById("step-count").textContent = t("stepOf", {
-      i: state.page + 1,
-      n: QUESTIONS.length,
-    });
+    const count = document.getElementById("step-count");
+    if (state.variant === "stack") count.textContent = t("allQuestions");
+    else if (state.page === REVIEW_INDEX) count.textContent = t("reviewCount", { n: TOTAL_PAGES });
+    else count.textContent = t("stepOf", { i: state.page + 1, n: TOTAL_PAGES });
 
     const dots = document.getElementById("dots");
     dots.textContent = "";
@@ -456,49 +759,70 @@ const PANEL_SCRIPT_BODY = `(() => {
       const dot = el("button", "gd-dot", String(index + 1));
       dot.type = "button";
       dot.dataset.goto = String(index);
-      const current = index === state.page;
+      const current = state.variant === "step" && index === state.page;
       dot.dataset.state = current ? "current" : isAnswered(question) ? "answered" : "idle";
       if (current) dot.setAttribute("aria-current", "step");
       dots.append(dot);
     });
+    const reviewDot = el("button", "gd-dot", "✓");
+    reviewDot.type = "button";
+    reviewDot.dataset.goto = String(REVIEW_INDEX);
+    reviewDot.setAttribute(
+      "aria-label",
+      t("reviewCount", { n: TOTAL_PAGES }),
+    );
+    reviewDot.dataset.state =
+      state.variant === "step" && state.page === REVIEW_INDEX ? "current" : "idle";
+    dots.append(reviewDot);
 
     const done = ANSWERABLE.filter(isAnswered).length;
     const meta = document.getElementById("step-meta");
     meta.textContent = "";
-    const parts = t("answeredOf")
-      .replace("{total}", String(ANSWERABLE.length))
-      .split("{done}");
+    const parts = t("answeredOf").replace("{total}", String(ANSWERABLE.length)).split("{done}");
     meta.append(
       document.createTextNode(parts[0]),
       el("b", null, String(done)),
       document.createTextNode(parts[1] || ""),
     );
     document.getElementById("track-fill").style.width =
-      (ANSWERABLE.length > 0 ? done / ANSWERABLE.length : 0) * 100 + "%";
+      (ANSWERABLE.length > 0 ? (done / ANSWERABLE.length) * 100 : 0) + "%";
   }
 
   function syncFooter() {
+    const step = state.variant === "step";
+    const onReview = step && state.page === REVIEW_INDEX;
     const last = state.page >= QUESTIONS.length - 1;
-    document.getElementById("b-prev").classList.toggle("hidden", state.page === 0);
+
+    document.getElementById("b-prev").classList.toggle("hidden", !step || state.page === 0);
     document.getElementById("b-prev").textContent = t("prev");
     document.getElementById("b-cancel").textContent = t("cancel");
-    document.getElementById("b-submit").textContent = last ? t("submit") : t("next");
+    document.getElementById("b-submit").textContent = step && !onReview && !last ? t("next") : t("submit");
 
     const hints = document.getElementById("hints");
     hints.textContent = "";
-    t("hintStep").forEach((pair, index) => {
+    if (state.error === "bridge") {
+      hints.dataset.state = "error";
+      hints.textContent = t("bridgeMissing");
+      return;
+    }
+    hints.dataset.state = "";
+    const pairs = t(step ? "hintStep" : "hintStack");
+    pairs.forEach((pair, index) => {
       if (index > 0) hints.append(document.createTextNode(" · "));
-      hints.append(el("kbd", null, pair[0]), document.createTextNode(" " + pair[1]));
+      const label = index === 0 && onReview ? t("confirm") : pair[1];
+      hints.append(el("kbd", null, pair[0]), document.createTextNode(" " + label));
     });
   }
 
-  function showError(question) {
-    const section = inner.querySelector('.q[data-qid="' + question.id + '"]');
-    if (section) section.classList.add("err");
-  }
-
-  function clearError() {
-    for (const section of inner.querySelectorAll(".q.err")) section.classList.remove("err");
+  function readStep() {
+    const question = QUESTIONS[state.page];
+    if (!question || question.type === "info") return;
+    if (question.type === "text") {
+      const area = inner.querySelector(".q-input[name='" + question.id + "']");
+      if (area) setAnswer(question, area.value);
+      return;
+    }
+    recompute(question);
   }
 
   function collect() {
@@ -509,27 +833,41 @@ const PANEL_SCRIPT_BODY = `(() => {
     return answers;
   }
 
+  /** The only place the panel talks back to the host. */
   function emit(payload) {
-    window.parent.postMessage(payload, "*");
+    const bridge = window.glimpse;
+    if (bridge && typeof bridge.send === "function") {
+      bridge.send(payload);
+      return;
+    }
+    state.error = "bridge";
+    syncFooter();
   }
 
   function submit() {
     const missing = ANSWERABLE.find((question) => question.required && !isAnswered(question));
     if (missing) {
-      state.page = QUESTIONS.indexOf(missing);
+      state.error = missing.id;
+      if (state.variant === "step") state.page = QUESTIONS.indexOf(missing);
       render();
-      showError(missing);
+      const node = questionSection(missing.id);
+      if (node) node.scrollIntoView({ block: "center" });
       return;
     }
-    emit({ round: data.round, cancelled: false, answers: collect() });
+    state.error = "";
+    const payload = { round: data.round, cancelled: false, answers: collect() };
+    const feedback = state.feedback.trim();
+    if (feedback !== "") payload.feedback = feedback;
+    emit(payload);
   }
 
   function goNext() {
     readStep();
-    clearError();
+    state.error = "";
     const current = QUESTIONS[state.page];
     if (current && current.required && !isAnswered(current)) {
-      showError(current);
+      state.error = current.id;
+      render();
       return;
     }
     if (state.page >= QUESTIONS.length - 1) {
@@ -541,44 +879,149 @@ const PANEL_SCRIPT_BODY = `(() => {
   }
 
   function goTo(index) {
-    readStep();
-    state.page = Math.max(0, Math.min(QUESTIONS.length - 1, index));
-    render();
+    const target = Math.max(0, Math.min(REVIEW_INDEX, index));
+    if (state.variant === "step") {
+      readStep();
+      state.error = "";
+      state.page = target;
+      render();
+      return;
+    }
+    const node =
+      target === REVIEW_INDEX
+        ? inner.querySelector(".q-review")
+        : questionSection(QUESTIONS[target].id);
+    if (node) node.scrollIntoView({ block: "start" });
   }
+
+  function setZoom(value) {
+    zoom = Math.min(1.5, Math.max(0.8, Math.round(value * 10) / 10));
+    document.body.style.zoom = String(zoom);
+  }
+
+  function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+  }
+
+  function preferredTheme() {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+
+  inner.addEventListener("change", (event) => {
+    const input = event.target;
+    if (!hasCustomInput(input)) return;
+    const question = QUESTIONS.find((item) => item.id === input.name);
+    if (!question) return;
+    recompute(question);
+    state.error = "";
+    const area = questionSection(question.id).querySelector(".custom-input");
+    const custom = questionSection(question.id).querySelector(".opt.is-custom input");
+    if (area && custom && custom.checked) area.focus();
+    syncStepbar();
+    syncFooter();
+  });
+
+  function hasCustomInput(node) {
+    return Boolean(node && node.name && node.closest && node.closest(".opts"));
+  }
+
+  inner.addEventListener("input", (event) => {
+    const node = event.target;
+    if (node.id === "review-feedback") {
+      state.feedback = node.value;
+      return;
+    }
+    const section = node.closest ? node.closest(".q") : null;
+    if (!section) return;
+    const question = QUESTIONS.find((item) => item.id === section.dataset.qid);
+    if (!question) return;
+    if (node.classList.contains("custom-input")) {
+      state.drafts[question.id] = node.value;
+      recompute(question);
+    } else {
+      setAnswer(question, node.value);
+      state.error = "";
+      section.classList.remove("err");
+      node.style.height = "auto";
+      node.style.height = Math.min(node.scrollHeight, 240) + "px";
+    }
+    syncStepbar();
+  });
+
+  inner.addEventListener("click", (event) => {
+    const thumb = event.target.closest(".thumb");
+    if (thumb) goTo(Number(thumb.dataset.goto));
+  });
 
   document.getElementById("dots").addEventListener("click", (event) => {
     const dot = event.target.closest(".gd-dot");
     if (dot) goTo(Number(dot.dataset.goto));
   });
   document.getElementById("b-prev").addEventListener("click", () => goTo(state.page - 1));
-  document.getElementById("b-submit").addEventListener("click", () => goNext());
+  document.getElementById("b-submit").addEventListener("click", () =>
+    state.variant === "step" ? goNext() : submit(),
+  );
   document.getElementById("b-cancel").addEventListener("click", () => {
     emit({ round: data.round, cancelled: true, answers: {} });
   });
-  document.addEventListener("change", () => {
-    readStep();
-    clearError();
-    syncStepbar();
+  document.getElementById("t-lang").addEventListener("click", () => {
+    lang = lang === "zh" ? "en" : "zh";
+    render();
   });
-  document.addEventListener("input", (event) => {
-    if (event.target.tagName !== "TEXTAREA") return;
-    readStep();
-    clearError();
-    syncStepbar();
+  document.getElementById("t-variant").addEventListener("click", () => {
+    state.variant = state.variant === "step" ? "stack" : "step";
+    state.error = "";
+    render();
   });
+  document.getElementById("t-theme").addEventListener("click", () => {
+    themeOverridden = true;
+    applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+  });
+  document.getElementById("t-zoom-in").addEventListener("click", () => setZoom(zoom + 0.1));
+  document.getElementById("t-zoom-out").addEventListener("click", () => setZoom(zoom - 0.1));
+  document.getElementById("t-zoom-reset").addEventListener("click", () => setZoom(1));
+
   document.addEventListener("keydown", (event) => {
+    const modifier = event.metaKey || event.ctrlKey;
     if (event.key === "Escape") {
       emit({ round: data.round, cancelled: true, answers: {} });
       return;
     }
-    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+    if (modifier && (event.key === "+" || event.key === "=")) {
+      setZoom(zoom + 0.1);
+      event.preventDefault();
+      return;
+    }
+    if (modifier && event.key === "-") {
+      setZoom(zoom - 0.1);
+      event.preventDefault();
+      return;
+    }
+    if (modifier && event.key === "0") {
+      setZoom(1);
+      event.preventDefault();
+      return;
+    }
+    if (event.key === "Enter" && modifier) {
       submit();
       return;
     }
-    if (event.key === "Enter" && event.target.tagName !== "TEXTAREA") goNext();
+    if (event.key === "Enter" && state.variant === "step" && event.target.tagName !== "TEXTAREA") {
+      goNext();
+    }
   });
 
-  document.getElementById("round-chip").textContent = t("round", { n: data.round });
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if (!themeOverridden) applyTheme(preferredTheme());
+  });
+
+  applyTheme(preferredTheme());
+  document.documentElement.dataset.reduceMotion = String(
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+  document.documentElement.dataset.contrast = String(
+    window.matchMedia("(prefers-contrast: more)").matches,
+  );
   render();
 })();`;
 
@@ -630,6 +1073,13 @@ ${GLIMPSE_PANEL_CSS}
   <header class="gd-titlebar">
     <span class="gd-title">xpi-research</span>
     <span class="chip" id="round-chip"></span>
+    <span class="gd-spacer"></span>
+    <button class="gd-toolbtn" id="t-lang" type="button"></button>
+    <button class="gd-toolbtn" id="t-variant" type="button"></button>
+    <button class="gd-toolbtn" id="t-theme" type="button">◐</button>
+    <button class="gd-toolbtn" id="t-zoom-out" type="button"></button>
+    <button class="gd-toolbtn" id="t-zoom-in" type="button"></button>
+    <button class="gd-toolbtn" id="t-zoom-reset" type="button"></button>
   </header>
   <div class="gd-stepbar">
     <div class="gd-steprow">
