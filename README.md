@@ -80,7 +80,11 @@ During the round, the extension temporarily enables `xpi_research_ask` and
 passes the target to `/skill:xpi-research`. The skill uses it only for
 unresolved decisions that affect the result. The tool returns bounded,
 structured answers to the current Agent turn; cancellation is explicit and
-contains no partial answers.
+contains no partial answers. A single-choice answer may be an option label or
+the user's own text; a multiple-choice answer lists the option labels in
+declaration order and may append at most one free-text entry. The overall
+comment from the review step travels in a separate `feedback` field and never
+appears inside `answers`.
 
 - **Quick**: simple single-choice and text questions use sequential Pi-native
   `select` and `input` dialogs.
@@ -92,6 +96,15 @@ contains no partial answers.
 - **No UI**: print and JSON modes cancel explicitly instead of blocking or
   fabricating answers. Glimpse load or prompt failures notify and use the
   native fallback.
+
+The Glimpse panel is stepped by default: one question per screen, with a step
+counter, clickable step dots and an answered count above the question, and a
+pinned footer below it. Every single and multiple-choice question offers a
+custom entry, and each option renders as a card that separates its label, its
+description, and its monospace preview. The last step reviews every answer,
+marks the unanswered ones, and adds one optional overall comment. The interface
+switches between Simplified Chinese and English, follows the system appearance,
+and supports zooming.
 
 Esc, closing a panel, or cancelling a native dialog returns `cancelled: true`
 with an empty answer object. Required questions remain answerable until the
