@@ -1,0 +1,89 @@
+## ADDED Requirements
+
+### Requirement: The Glimpse panel SHALL present questions as a navigable stepped questionnaire
+
+The Glimpse panel SHALL present questions as a navigable stepped questionnaire. 面板必须默认为分步向导：一次呈现一题，并在问题之上提供步骤计数、可点击的步骤指示器和已作答数量。步骤指示器必须区分未作答、已作答和当前步骤，且允许直接跳转到任意步骤或汇总页。面板必须保留单页堆叠形态作为可选布局，两种布局必须共享同一套校验与提交行为。底栏必须固定可见，不得随内容滚动离开视野，其操作按钮必须使用明显的命中面积。
+
+#### Scenario: Stepped layout shows position and progress
+- **WHEN** a questionnaire with three answerable questions opens in the default layout
+- **THEN** the panel shows the current step number, one indicator per step plus the review step, the count of answered questions, and a progress track
+
+#### Scenario: Step indicator navigates directly
+- **WHEN** the user activates the indicator of another step
+- **THEN** the panel shows that step without submitting or discarding answers already given
+
+#### Scenario: Stacked layout keeps the same contract
+- **WHEN** the user switches the panel to the stacked layout
+- **THEN** all questions and the review section render in one scrollable column while keyboard hints, validation and submission behaviour stay identical
+
+### Requirement: The Glimpse panel SHALL offer a custom answer for every option-based question
+
+The Glimpse panel SHALL offer a custom answer for every option-based question. 每个单选与多选问题必须在选项列表末尾提供自定义入口。选中该入口必须展开文本输入框并聚焦它。单选时自定义入口必须与普通选项互斥；多选时自定义文本必须作为附加项与已选选项并存。选项与自定义文本之间来回切换时，已输入的自定义文本不得丢失。自定义文本为空时该问题必须仍被视为未作答。
+
+#### Scenario: Custom entry reveals a text input
+- **WHEN** the user selects the custom entry of an option-based question
+- **THEN** a text input appears for that question and receives focus
+
+#### Scenario: Custom answer is exclusive for single questions
+- **WHEN** the user selects the custom entry of a single question after choosing an option
+- **THEN** the previously chosen option is deselected and only the custom answer is recorded
+
+#### Scenario: Custom answer accompanies selections for multi questions
+- **WHEN** the user selects options and also fills the custom entry of a multi question
+- **THEN** the recorded answer contains the selected options in questionnaire order plus the custom text
+
+#### Scenario: Draft text survives navigation
+- **WHEN** the user types custom text, moves to another step, and returns
+- **THEN** the typed text is still present and its selection state is preserved
+
+### Requirement: The Glimpse panel SHALL summarise every step before submission
+
+The Glimpse panel SHALL summarise every step before submission. 面板必须提供一个汇总确认步骤，位于全部问题之后。汇总必须列出所有步骤，包括信息类问题，并为每个可回答问题显示其当前答案或明确的未作答标记。激活任意汇总条目必须跳转到对应步骤以便修改。汇总步骤必须提供独立于问题答案的整体补充反馈输入。
+
+#### Scenario: Review lists every step
+- **WHEN** the user reaches the final step
+- **THEN** the panel lists every question in original order with its answer, and unanswered questions are explicitly marked as unanswered
+
+#### Scenario: Review entry jumps back to its question
+- **WHEN** the user activates a review entry
+- **THEN** the panel navigates to the corresponding question so the answer can be changed
+
+#### Scenario: Review feedback is separate from answers
+- **WHEN** the user writes text into the review feedback input
+- **THEN** that text is collected separately from question answers and does not appear as an answer to any question
+
+### Requirement: The Glimpse panel SHALL submit and cancel through the Glimpse bridge
+
+The Glimpse panel SHALL submit and cancel through the Glimpse bridge. 面板必须通过 `window.glimpse.send` 回传提交与取消载荷，不得使用不存在的页面间通信通道。提交必须回传 `round`、`cancelled: false` 与规范化答案；取消必须回传 `round`、`cancelled: true` 与空答案。当页面无法访问该桥时，面板必须保持可用并明确告知结果未能回传，而不是静默失败。
+
+#### Scenario: Submit reaches the host
+- **WHEN** the user fills the questionnaire and activates the submit action
+- **THEN** the host receives one payload containing the round, `cancelled: false`, and the collected answers
+
+#### Scenario: Cancel reaches the host
+- **WHEN** the user activates cancel or presses Esc
+- **THEN** the host receives one payload with `cancelled: true` and empty answers
+
+#### Scenario: Bridge is unavailable
+- **WHEN** the panel is rendered outside Glimpse and the bridge is missing
+- **THEN** the panel does not throw, the interaction remains usable, and the missing channel is surfaced to the user
+
+### Requirement: The Glimpse panel SHALL apply the project design tokens and bilingual interface text
+
+The Glimpse panel SHALL apply the project design tokens and bilingual interface text. 面板必须使用项目指定的两套语义颜色令牌分别覆盖亮色与暗色，并默认跟随系统外观；亮暗主题必须由数据属性切换，不得在组件内写死颜色。面板必须提供简体中文与英文的界面文案切换，所有界面自有文案必须来自单一文案字典，切换后无需重载即可全量重绘。题目正文、选项与预览属于 Agent 内容，必须按原文渲染且不参与翻译。所有动态内容必须以文本方式渲染，不得作为 HTML 或脚本执行。
+
+#### Scenario: Theme follows the system and can be overridden
+- **WHEN** the host system appearance is dark and the panel opens
+- **THEN** the panel renders with the dark token set, and changing the theme keeps all controls legible in both schemes
+
+#### Scenario: Language toggle redraws the whole interface
+- **WHEN** the user switches the interface language
+- **THEN** every interface string, badge, placeholder, keyboard hint and accessible name is redrawn in the selected language while question content stays in its original wording
+
+#### Scenario: Interface text is never hardcoded
+- **WHEN** the panel template is inspected
+- **THEN** interface strings are resolved through the translation dictionary rather than embedded literals in the markup
+
+#### Scenario: Agent content containing markup is rendered literally
+- **WHEN** a question, option label, description or preview contains HTML-like or script text
+- **THEN** the panel displays it as literal text without altering structure or executing code
