@@ -217,6 +217,12 @@ describe("panel navigation shell", () => {
     expect(GLIMPSE_PANEL_SCRIPT).toContain("bridgeMissing");
   });
 
+  it("keeps zoom on the content pane so the chrome stays fixed", () => {
+    expect(GLIMPSE_PANEL_SCRIPT).toContain('setProperty("--zoom"');
+    expect(GLIMPSE_PANEL_SCRIPT).not.toContain("document.body.style.zoom");
+    expect(GLIMPSE_PANEL_CSS).toContain("zoom: var(--zoom, 1)");
+  });
+
   it("renders a custom entry and a review step", () => {
     expect(GLIMPSE_PANEL_SCRIPT).toContain('"opt is-custom"');
     expect(GLIMPSE_PANEL_SCRIPT).toContain('"custom-wrap"');

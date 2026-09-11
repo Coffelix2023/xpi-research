@@ -337,7 +337,7 @@ input, textarea { -webkit-user-select: text; user-select: text; font: inherit; }
 .gd-track { position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; background: var(--muted); }
 .gd-track i { display: block; width: 0; height: 100%; background: var(--primary); transition: width var(--dur) var(--ease); }
 .gd-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 20px; }
-.gd-inner { max-width: 660px; margin: 0 auto; min-height: 100%; }
+.gd-inner { max-width: calc(660px / var(--zoom, 1)); margin: 0 auto; min-height: calc(100% / var(--zoom, 1)); zoom: var(--zoom, 1); }
 
 .q { padding-bottom: 20px; }
 .q + .q { padding-top: 20px; border-top: 1px solid var(--border); }
@@ -896,7 +896,8 @@ const PANEL_SCRIPT_BODY = `(() => {
 
   function setZoom(value) {
     zoom = Math.min(1.5, Math.max(0.8, Math.round(value * 10) / 10));
-    document.body.style.zoom = String(zoom);
+    // Zoom the content pane only; the title bar, step bar and footer keep their size.
+    document.documentElement.style.setProperty("--zoom", String(zoom));
   }
 
   function applyTheme(theme) {
