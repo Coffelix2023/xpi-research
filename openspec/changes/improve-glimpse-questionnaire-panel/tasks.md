@@ -38,7 +38,7 @@
 
 ## 6. 端到端验收与交付
 
-- [ ] 6.1 运行 `pnpm typecheck`、`pnpm -w run lint`、`pnpm test` 三条命令并确认全部通过；把实际输出作为交付证据
-- [ ] 6.2 在真实 Glimpse 窗口中手工验收：展开面板、切换到汇总页、提交并确认宿主收到 `cancelled: false` 与规范化答案；再次打开后按 `Esc`，确认宿主收到 `cancelled: true` 与空答案；记录两次载荷
-- [ ] 6.3 按 Conventional Commits 小粒度提交（至少拆为：面板重构、模板移植与桥修复、契约扩展与测试、文档同步），`git add <具体文件>` 暂存，确认 `git diff --cached --check` 无空白错误
-- [ ] 6.4 推送分支并开 PR，PR 描述包含目的、改动范围与验证方式；停在合并前，由人工确认合并
+- [x] 6.1 运行 `pnpm typecheck`、`pnpm -w run lint`、`pnpm test` 三条命令并确认全部通过；把实际输出作为交付证据
+- [ ] 6.2 **(待人工)** 在真实 Glimpse 窗口中手工验收：展开面板、切换到汇总页、提交并确认宿主收到 `cancelled: false` 与规范化答案；再次打开后按 `Esc`，确认宿主收到 `cancelled: true` 与空答案；记录两次载荷
+- [x] 6.3 按 Conventional Commits 小粒度提交（至少拆为：面板重构、模板移植与桥修复、契约扩展与测试、文档同步），`git add <具体文件>` 暂存，确认 `git diff --cached --check` 无空白错误
+- [x] 6.4 推送分支并开 PR，PR 描述包含目的、改动范围与验证方式；停在合并前，由人工确认合并
