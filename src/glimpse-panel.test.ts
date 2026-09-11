@@ -190,6 +190,12 @@ describe("panel navigation shell", () => {
       "b-prev",
       "b-cancel",
       "b-submit",
+      "t-lang",
+      "t-variant",
+      "t-theme",
+      "t-zoom-in",
+      "t-zoom-out",
+      "t-zoom-reset",
     ]) {
       expect(html).toContain(`id="${id}"`);
     }
@@ -201,5 +207,30 @@ describe("panel navigation shell", () => {
     expect(GLIMPSE_PANEL_SCRIPT).toContain("event.metaKey || event.ctrlKey");
     expect(GLIMPSE_PANEL_SCRIPT).toContain('getElementById("b-submit")');
     expect(GLIMPSE_PANEL_SCRIPT).toContain('getElementById("dots")');
+  });
+
+  it("submits through the glimpse bridge instead of page messaging", () => {
+    expect(GLIMPSE_PANEL_SCRIPT).toContain("window.glimpse");
+    expect(GLIMPSE_PANEL_SCRIPT).toContain("bridge.send(payload)");
+    expect(GLIMPSE_PANEL_SCRIPT).not.toContain("postMessage(");
+    expect(GLIMPSE_PANEL_SCRIPT).toContain("bridgeMissing");
+  });
+
+  it("renders a custom entry and a review step", () => {
+    expect(GLIMPSE_PANEL_SCRIPT).toContain('"opt is-custom"');
+    expect(GLIMPSE_PANEL_SCRIPT).toContain('"custom-wrap"');
+    expect(GLIMPSE_PANEL_SCRIPT).toContain('"q q-review"');
+    expect(GLIMPSE_PANEL_SCRIPT).toContain('"review-feedback"');
+    expect(GLIMPSE_PANEL_CSS).toContain(
+      ".opt.is-custom:has(input:checked) + .custom-wrap",
+    );
+  });
+
+  it("prefers system appearance and honours motion and contrast preferences", () => {
+    expect(GLIMPSE_PANEL_SCRIPT).toContain("prefers-color-scheme: dark");
+    expect(GLIMPSE_PANEL_SCRIPT).toContain("prefers-reduced-motion: reduce");
+    expect(GLIMPSE_PANEL_SCRIPT).toContain("prefers-contrast: more");
+    expect(GLIMPSE_PANEL_CSS).toContain('[data-reduce-motion="true"]');
+    expect(GLIMPSE_PANEL_CSS).toContain('[data-contrast="true"]');
   });
 });
