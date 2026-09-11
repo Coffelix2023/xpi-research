@@ -79,6 +79,7 @@ components:
 Terminal Minimalist TUI treats every character cell in the terminal as an information-dense workbench. Designed specifically for terminal command-line interfaces (CLIs), text user interfaces (TUIs), status footers, and Pi Coding Agent extensions, it emphasizes immediate legibility, non-disruptive presence, and minimal cognitive overhead.
 
 The visual style is restrained, predictable, and functional:
+
 - **Footers & Status Bars**: Pinned, single-line, zero-flicker components designed to inform without stealing developer focus.
 - **Modals & Inspectors**: Layered diagnostic panels with clean box-drawing boundaries, structured metrics grids, and predictable keyboard dismissals (`Esc`/`Enter`/`q`).
 - **Dual-Track Presentation (Optional)**: In graphical environments where native companion webview/window tools (e.g., Glimpse) are available, detailed inspectors can open in a dedicated 800×600 frameless dark micro-window, while seamlessly degrading to a centered Pi TUI modal in headless or remote SSH environments.
@@ -181,32 +182,41 @@ Shapes in the terminal are rendered via Unicode Box Drawing characters and frami
 Terminal components provide standardized building blocks for CLI tools, TUI footers, and modal inspectors:
 
 ### 1. Footer (`{components.footer}`)
+
 A compact 1-line status bar pinned to the bottom of the active session:
+
 - Displays extension status, active model, token metrics, or operational mode.
 - Rendered with muted metadata separators (`│` or `·`).
 - Must operate non-destructively on terminal redraws.
 
 ### 2. Status Bar (`{components.status-bar}`)
+
 Horizontal bar containing segmented key-value diagnostics:
+
 - Divided into logical zones (Left: Identity/Status, Center: Context/Task, Right: Resource/Help).
 
 ### 3. Badge (`{components.badge}`)
+
 Compact status indicator (e.g., `[PASS]`, `[FAIL]`, `[IDLE]`, `● on`):
+
 - Pairs a semantic color (`success`, `warning`, `error`, `muted`) with concise text.
 
 ### 4. Box & Panel (`{components.box}`)
+
 Framed content panel for grouped diagnostics, diff previews, or wizard cards.
 
 ### 5. Modal & Inspector (`{components.modal}`)
+
 For comprehensive status inspections, follows a **4-tier vertical information architecture**:
+
 1. **Header**: Title and status badge (e.g., `╭─ [Title: System Status] ──────────── [Badge: ● on] ─╮`).
 2. **Key-Value Grid**: 2-column or 4-column high-priority operational metrics.
 3. **Divider & Details**: Horizontal divider (`├──────┤`) with scrollable diagnostic rows.
 4. **Footer / Navigation**: Bottom action hints (e.g., `╰─ ↑/↓ scroll · Esc / Enter close ────╯`).
 
 ### 6. Key-Value Row (`{components.key-value}`)
-Aligned label-value pairs with dimmed muted keys and crisp ink values.
 
+Aligned label-value pairs with dimmed muted keys and crisp ink values.
 
 ### 7. Questionnaire Panel (dual-track interactive window)
 
@@ -218,9 +228,11 @@ The Glimpse micro-window that collects research answers follows the modal archit
 - **A review step closes the panel.** It lists every step, marks unanswered questions, jumps back to any of them, and owns its own comment field, which travels outside the answer map.
 
 The footer stays pinned while content scrolls, and its actions carry a hit area large enough to read at a glance. Keyboard contract: `Esc` cancels, `Enter` advances, `Cmd/Ctrl+Enter` submits, `Tab` and arrows work inside the option groups.
+
 ## Do's and Don'ts
 
 ### Do's (Mandatory Practices)
+
 - **Do** use `truncateToWidth` / `visibleWidth` for all terminal line width calculations and border padding.
 - **Do** enforce a bottom safety margin (`margin.bottom >= 4`) for centered overlays to keep the user prompt visible.
 - **Do** support standard dismissal keys (`Esc`, `Enter`, `q`) for interactive dialogs and modal overlays.
@@ -230,6 +242,7 @@ The footer stays pinned while content scrolls, and its actions carry a hit area 
 - **Do** preserve terminal cursor position and avoid overwriting user scrollback history.
 
 ### Don'ts (Strict Prohibitions)
+
 - **Don't** use raw `string.length` to calculate padding for lines containing ANSI escape sequences or multi-byte characters.
 - **Don't** use `anchor: "bottom-right"` with negative offsets that risk covering input controls.
 - **Don't** inject unescaped dynamic text directly into native window HTML templates.
