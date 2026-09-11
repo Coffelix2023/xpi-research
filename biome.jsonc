@@ -63,6 +63,7 @@
       "!**/build",
       "!**/backend",
       "!**/__fixtures__",
+      "!docs/prototypes", //排除设计原型 (浏览器预览用, 非交付代码)
       "!src/components/ui", //排除 shadcn-ui
       "!src/components/assistant-ui", //排除 assistant-ui
       "!src/components/animate-ui", //排除 animate-ui

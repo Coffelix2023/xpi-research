@@ -1,0 +1,872 @@
+<!doctype html>
+<html lang="zh-CN" class="proto">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light dark">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>xpi-research · 问卷面板原型 v2</title>
+<style>
+/* ============================================================================
+   Token 来源
+   暗色 = 你给的 A 套 (.dark 块)   —— [data-theme="dark"]
+   亮色 = 你给的 B 套 (:root 块)   —— 默认
+   语义映射: 面板表面=popover/background, 选项卡=muted, 悬停=accent,
+             选中=primary 混合, 错误=destructive, 焦点环=ring
+   注: Montserrat / Source Code Pro 未在本地加载(原生面板不联网), 走 fallback。
+   PROTO 专用区块用 [PROTO] 标注, 提取到 src/glimpse.ts 时删除。
+   ============================================================================ */
+:root {
+  /* ---- B 套 · 亮色 ---- */
+  --background: oklch(0.9711 0.0074 80.7211);
+  --foreground: oklch(0.3 0.0358 30.2042);
+  --card: oklch(0.9711 0.0074 80.7211);
+  --card-foreground: oklch(0.3 0.0358 30.2042);
+  --popover: oklch(0.9711 0.0074 80.7211);
+  --popover-foreground: oklch(0.3 0.0358 30.2042);
+  --primary: oklch(0.5234 0.1347 144.1672);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.9571 0.021 147.636);
+  --secondary-foreground: oklch(0.4254 0.1159 144.3078);
+  --muted: oklch(0.937 0.0142 74.4218);
+  --muted-foreground: oklch(0.4495 0.0486 39.211);
+  --accent: oklch(0.8952 0.0504 146.0366);
+  --accent-foreground: oklch(0.4254 0.1159 144.3078);
+  --destructive: oklch(0.5386 0.1937 26.7249);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.8805 0.0208 74.6428);
+  --input: oklch(0.8805 0.0208 74.6428);
+  --ring: oklch(0.5234 0.1347 144.1672);
+
+  --font-sans: Montserrat, ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "Source Code Pro", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --radius: 0.5rem;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --dur: 140ms; --ease: cubic-bezier(.25, .1, .25, 1);
+}
+
+[data-theme="dark"] {
+  /* ---- A 套 · 暗色 ---- */
+  --background: oklch(0.2679 0.0036 106.6427);
+  --foreground: oklch(0.8074 0.0142 93.0137);
+  --card: oklch(0.2679 0.0036 106.6427);
+  --card-foreground: oklch(0.9818 0.0054 95.0986);
+  --popover: oklch(0.3085 0.0035 106.6039);
+  --popover-foreground: oklch(0.9211 0.004 106.4781);
+  --primary: oklch(0.6724 0.1308 38.7559);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.9818 0.0054 95.0986);
+  --secondary-foreground: oklch(0.3085 0.0035 106.6039);
+  --muted: oklch(0.2213 0.0038 106.707);
+  --muted-foreground: oklch(0.7713 0.0169 99.0657);
+  --accent: oklch(0.213 0.0078 95.4245);
+  --accent-foreground: oklch(0.9663 0.008 98.8792);
+  --destructive: oklch(0.6368 0.2078 25.3313);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.3618 0.0101 106.8928);
+  --input: oklch(0.4336 0.0113 100.2195);
+  --ring: oklch(0.6724 0.1308 38.7559);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font: 13.5px/1.55 var(--font-sans);
+  background: transparent !important;
+  color: var(--foreground);
+  -webkit-user-select: none; user-select: none;
+}
+input, textarea { -webkit-user-select: text; user-select: text; font: inherit; }
+:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+
+/* [PROTO] 浏览器预览用的假桌面, 生产环境(透明窗口)整块删除 */
+.proto body {
+  padding: 26px;
+  background:
+    radial-gradient(900px 520px at 12% 8%, #2b3550 0%, transparent 62%),
+    radial-gradient(760px 520px at 88% 92%, #3a2b3f 0%, transparent 60%),
+    linear-gradient(160deg, #14161c, #0e1013) !important;
+}
+[data-theme="light"].proto body {
+  background:
+    radial-gradient(900px 520px at 12% 8%, #cfd8ea 0%, transparent 62%),
+    radial-gradient(760px 520px at 88% 92%, #e6d5e4 0%, transparent 60%),
+    linear-gradient(160deg, #eef1f6, #dfe3ea) !important;
+}
+
+.gd-shell {
+  display: flex; flex-direction: column; overflow: hidden;
+  height: 100vh;
+  color: var(--popover-foreground);
+  background: color-mix(in srgb, var(--popover) 88%, transparent);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  backdrop-filter: blur(24px) saturate(1.4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  animation: gd-in var(--dur) var(--ease);
+}
+/* [PROTO] 生产环境: body 无 padding, 面板铺满窗口, 无圆角 */
+.proto .gd-shell { height: calc(100vh - 52px); border-radius: var(--radius-xl); }
+@keyframes gd-in { from { opacity: 0; transform: translateY(4px); } }
+
+/* ---------- 标题栏 ---------- */
+.gd-titlebar {
+  flex: none; display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+}
+.gd-title { font-weight: 700; letter-spacing: .01em; }
+.chip {
+  flex: none; padding: 2px 8px; font-size: 11.5px; color: var(--muted-foreground);
+  background: var(--muted); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.gd-titlebar .spacer { flex: 1; }
+.gd-toolbtn {
+  flex: none; min-width: 30px; height: 26px; padding: 0 9px;
+  font: inherit; font-size: 12px; color: var(--muted-foreground);
+  background: var(--muted); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); cursor: pointer;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.gd-toolbtn:hover { background: var(--accent); color: var(--accent-foreground); }
+
+/* ---------- 步骤条 (加大: 序号 / 圆点 / 进度) ---------- */
+.gd-stepbar {
+  flex: none; position: relative; padding: 12px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--background) 55%, transparent);
+}
+.gd-steprow { display: flex; align-items: center; gap: 14px; }
+.gd-stepcount { flex: none; font-size: 17px; font-weight: 650; letter-spacing: .01em; }
+.gd-dots { flex: 1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.gd-dot {
+  width: 30px; height: 30px; padding: 0; font: 600 13px var(--font-sans);
+  color: var(--muted-foreground); cursor: pointer;
+  background: var(--muted); border: 1px solid var(--border); border-radius: 999px;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.gd-dot:hover { background: var(--accent); color: var(--accent-foreground); }
+.gd-dot[data-state="answered"] { color: var(--primary); border-color: var(--primary); }
+.gd-dot[data-state="current"] {
+  color: var(--primary-foreground); background: var(--primary); border-color: var(--primary);
+}
+.gd-stepmeta { flex: none; font-size: 13px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.gd-stepmeta b { color: var(--foreground); font-weight: 650; }
+.gd-track {
+  position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; background: var(--muted);
+}
+.gd-track i { display: block; height: 100%; width: 0; background: var(--primary); transition: width var(--dur) var(--ease); }
+
+/* ---------- 内容区 ---------- */
+.gd-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 20px; }
+.gd-inner { max-width: 660px; margin: 0 auto; }
+.q { padding-bottom: 20px; }
+.q + .q { padding-top: 20px; border-top: 1px solid var(--border); }
+.q-head { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; flex-wrap: wrap; }
+.q-num {
+  flex: none; padding: 1px 7px; font-size: 11.5px; font-weight: 700;
+  color: var(--primary-foreground); background: var(--primary); border-radius: var(--radius-sm);
+}
+.badge {
+  flex: none; padding: 1px 7px; font-size: 11.5px; color: var(--muted-foreground);
+  background: var(--muted); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.badge.req { color: var(--destructive); border-color: color-mix(in srgb, var(--destructive) 50%, transparent); }
+.q-prompt { font-size: 15px; font-weight: 650; line-height: 1.5; white-space: pre-wrap; }
+
+.opts { display: flex; flex-direction: column; gap: 7px; margin-top: 12px; }
+.opt {
+  display: grid; grid-template-columns: 18px 1fr; gap: 0 11px;
+  padding: 11px 13px; cursor: pointer;
+  background: var(--muted); border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.opt:hover { background: var(--accent); }
+.opt input { align-self: start; width: 16px; height: 16px; margin-top: 3px; accent-color: var(--primary); cursor: pointer; }
+.opt:has(input:checked) {
+  background: color-mix(in srgb, var(--primary) 16%, var(--muted));
+  border-color: var(--primary);
+}
+.opt-body { min-width: 0; }
+.opt-title { display: block; font-weight: 550; white-space: pre-wrap; overflow-wrap: anywhere; }
+.opt-title .badge { margin-left: 6px; vertical-align: 1px; }
+.opt-desc { margin-top: 4px; font-size: 12.5px; color: var(--muted-foreground); white-space: pre-wrap; overflow-wrap: anywhere; }
+.opt-prev {
+  margin-top: 7px; padding: 9px 11px; max-height: 220px; overflow: auto;
+  font: 12px/1.5 var(--font-mono); color: var(--muted-foreground);
+  background: color-mix(in srgb, var(--background) 70%, transparent);
+  border: 1px solid var(--border); border-radius: var(--radius-md); white-space: pre-wrap;
+}
+.opt.is-custom .opt-title { color: var(--muted-foreground); font-weight: 500; }
+.custom-wrap { display: none; margin: 7px 0 1px; }
+.opt.is-custom:has(input:checked) + .custom-wrap { display: block; }
+
+.q-input, .custom-input {
+  width: 100%; padding: 10px 12px; resize: vertical;
+  color: var(--foreground); background: var(--muted);
+  border: 1px solid var(--input); border-radius: var(--radius-md); line-height: 1.55;
+}
+.custom-input { font-size: 13px; }
+.q-input { margin-top: 12px; }
+.q-input::placeholder, .custom-input::placeholder { color: var(--muted-foreground); }
+.q-note {
+  margin-top: 12px; padding: 11px 13px; color: var(--muted-foreground); white-space: pre-wrap;
+  background: var(--muted); border: 1px solid var(--border); border-radius: var(--radius-lg);
+}
+.q-err { display: none; margin-top: 9px; font-size: 12.5px; color: var(--destructive); }
+.q.err .q-err { display: block; }
+.q.err .opt, .q.err .q-input { border-color: var(--destructive); }
+
+/* ---------- 汇总页 ---------- */
+.review-lead { margin-top: 10px; font-size: 13px; color: var(--muted-foreground); }
+.review-ask { margin-top: 18px; font-size: 13.5px; font-weight: 650; }
+.review-list { display: flex; flex-direction: column; gap: 7px; margin-top: 12px; }
+.thumb {
+  display: grid; grid-template-columns: 30px 1fr; gap: 0 11px; width: 100%; text-align: left;
+  padding: 10px 12px; cursor: pointer; font: inherit; color: inherit;
+  background: var(--muted); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.thumb:hover { background: var(--accent); }
+.thumb-no {
+  grid-row: span 2; width: 26px; height: 26px; display: grid; place-items: center;
+  font-size: 12px; font-weight: 700; color: var(--muted-foreground);
+  background: var(--background); border: 1px solid var(--border); border-radius: 999px;
+}
+.thumb-q {
+  font-size: 12px; color: var(--muted-foreground);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.thumb-a { font-size: 13.5px; font-weight: 550; white-space: pre-wrap; overflow-wrap: anywhere; }
+.thumb-a.empty { color: var(--muted-foreground); font-weight: 400; font-style: italic; }
+.thumb-custom { color: var(--muted-foreground); }
+
+/* ---------- 底栏 ---------- */
+.gd-footer {
+  flex: none; display: flex; align-items: center; gap: 10px;
+  padding: 13px 16px; border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--background) 80%, transparent);
+  -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px);
+}
+.hints { flex: 1; font-size: 12px; color: var(--muted-foreground); }
+kbd {
+  font: 11.5px var(--font-mono); padding: 2px 6px; color: var(--foreground);
+  background: var(--muted); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.btn {
+  min-height: 40px; padding: 9px 20px; font: 600 14px var(--font-sans);
+  color: var(--foreground); background: var(--muted);
+  border: 1px solid var(--border); border-radius: var(--radius-lg); cursor: pointer;
+  transition: background var(--dur) var(--ease), filter var(--dur) var(--ease);
+}
+.btn:hover { background: var(--accent); color: var(--accent-foreground); }
+.btn-primary { color: var(--primary-foreground); background: var(--primary); border-color: transparent; }
+.btn-primary:hover { color: var(--primary-foreground); background: var(--primary); filter: brightness(1.08); }
+.btn:disabled { opacity: .45; cursor: default; filter: none; }
+.btn.hidden { display: none; }
+
+[data-reduce-motion="true"] * { animation: none !important; transition: none !important; }
+</style>
+</head>
+<body>
+<div class="gd-shell">
+  <header class="gd-titlebar">
+    <span class="gd-title">xpi-research</span>
+    <span class="chip" id="round-chip"></span>
+    <span class="spacer"></span>
+    <button class="gd-toolbtn" id="t-lang" title="Switch to English"></button>
+    <button class="gd-toolbtn" id="t-variant" title="布局: 分步 / 单页"></button>
+    <button class="gd-toolbtn" id="t-theme" title="暗色 / 亮色">◐</button>
+    <button class="gd-toolbtn" id="t-out" title="缩小">A−</button>
+    <button class="gd-toolbtn" id="t-in" title="放大">A+</button>
+    <button class="gd-toolbtn" id="t-reset" title="重置缩放">⟲</button>
+  </header>
+
+  <div class="gd-stepbar">
+    <div class="gd-steprow">
+      <span class="gd-stepcount" id="step-count"></span>
+      <div class="gd-dots" id="dots" role="tablist" aria-label="questions"></div>
+      <span class="gd-stepmeta" id="step-meta"></span>
+    </div>
+    <div class="gd-track"><i id="track-fill"></i></div>
+  </div>
+
+  <main class="gd-content" id="content"><div class="gd-inner" id="inner"></div></main>
+
+  <footer class="gd-footer">
+    <span class="hints" id="hints"></span>
+    <button class="btn hidden" id="b-prev"></button>
+    <button class="btn" id="b-cancel"></button>
+    <button class="btn btn-primary" id="b-submit"></button>
+  </footer>
+</div>
+
+<script type="application/json" id="xpi-data">
+{
+  "round": 1,
+  "questionnaire": {
+    "presentation": "visual",
+    "questions": [
+      {
+        "id": "b1b2",
+        "prompt": "你在 B1B2 对比面板里提交的「通过」, 指的是哪一个结论? 面板没给「选哪个」的选项, 所以这个答案是模糊的。",
+        "required": true,
+        "type": "single",
+        "options": [
+          { "label": "两版都不满意, 需要第三轮迭代", "description": "说明两轮面板还不够收敛。", "recommended": true },
+          { "label": "B2 通过 (宽松版)", "description": "行高 20px/24px · 主按钮全宽 · 卡片阴影。选它 = 只落地 B2。", "preview": "┌──────────────────────────────┐\n│  Row height 20 / pad 24px    │\n│  [   主按钮全宽   ]  shadow    │\n└──────────────────────────────┘" },
+          { "label": "B1 通过 (紧凑版)", "description": "行高 13px/16px · 按钮右对齐 · 无阴影。选它说明当前面板把要选的那一张锁死了。", "preview": "┌──────────────────────────────┐\n│ Row 13/16px        [ 主 ][次] │\n└──────────────────────────────┘" }
+        ]
+      },
+      {
+        "id": "mvp",
+        "prompt": "改进方案里, 哪些是你认可要进的 MVP?",
+        "required": true,
+        "type": "multi",
+        "options": [
+          { "label": "P1 变体对比", "description": "新增显式工具把任意两张 capture 组成 comparison, 带 mode: regression|variant。这是解锁你任务 2 的最小改动。", "recommended": true },
+          { "label": "P4 面板支持提问 + 选项", "description": "visual_feedback 增加可选 question 与 options(2-4), 返回结构化 choice。这样「是否同意/选哪个」不用再解析中文自由文本。" },
+          { "label": "P2 non-comparable 也返回图", "description": "verify 判定不可比时仍返回那对图, 并显式标注 evidence: non-equivalent。" },
+          { "label": "P8 反馈回填到后续 capture", "description": "capture/verify 的返回值带上本次 inspection 已有的反馈(含 region 与 comment)。" }
+        ]
+      },
+      {
+        "id": "notice",
+        "prompt": "下面的问题会问你更在意哪个约束。",
+        "required": false,
+        "type": "info"
+      },
+      {
+        "id": "extra",
+        "prompt": "补充约束或你更在意的点?",
+        "required": false,
+        "type": "text"
+      }
+    ]
+  }
+}
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ======================= i18n ======================= */
+  var UI_TEXT = {
+    zh: {
+      lang: "EN", langTitle: "Switch to English", variant: "单页", variantTitle: "切换为单页布局",
+      round: "第 {n} 轮",
+      allQuestions: "全部问题",
+      stepOf: "问题 {i} / {n}", reviewStep: "确认 / {n}",
+      answeredOf: "已答 {done} / {total}",
+      typeSingle: "单选", typeMulti: "多选", typeText: "文本", typeInfo: "说明",
+      badgeRequired: "必答", badgeOptional: "可留空", badgeRecommended: "推荐",
+      customTitle: "自定义…", customPlaceholder: "输入你的答案…",
+      textPlaceholder: "输入你的回答…", textPlaceholderOptional: "可留空",
+      errorRequired: "必答: 请先作答再继续。",
+      prev: "← 上一步", next: "下一步 →", submit: "提交", cancel: "取消", confirm: "确认",
+      stepMode: "分步",
+      reviewCount: "确认 / {n}",
+      reviewLead: "下面是你的全部答案。点任意一条可以回到该题修改。",
+      reviewFeedback: "还有别的补充吗?",
+      reviewFeedbackPlaceholder: "可留空",
+      emptyAnswer: "未作答",
+      hintStep: [["⏎", "下一步"], ["esc", "取消"], ["⌘⏎", "提交"]],
+      hintStack: [["tab", "切换选项"], ["esc", "取消"], ["⌘⏎", "提交"]],
+      dataBroken: "题目数据损坏, 无法渲染: ",
+    },
+    en: {
+      lang: "中", langTitle: "切换到简体中文", variant: "Stacked", variantTitle: "Switch to stacked layout",
+      round: "Round {n}",
+      allQuestions: "All questions",
+      stepOf: "Question {i} / {n}", reviewStep: "Review / {n}",
+      answeredOf: "{done} / {total} answered",
+      typeSingle: "single", typeMulti: "multiple", typeText: "text", typeInfo: "info",
+      badgeRequired: "required", badgeOptional: "optional", badgeRecommended: "recommended",
+      customTitle: "Custom…", customPlaceholder: "Type your own answer…",
+      textPlaceholder: "Type your answer…", textPlaceholderOptional: "Optional",
+      errorRequired: "Required: answer this before continuing.",
+      prev: "← Back", next: "Next →", submit: "Submit", cancel: "Cancel", confirm: "Confirm",
+      stepMode: "Stepped",
+      reviewCount: "Review / {n}",
+      reviewLead: "These are your answers. Click any row to go back and change it.",
+      reviewFeedback: "Anything else to add?",
+      reviewFeedbackPlaceholder: "Optional",
+      emptyAnswer: "Not answered",
+      hintStep: [["⏎", "next"], ["esc", "cancel"], ["⌘⏎", "submit"]],
+      hintStack: [["tab", "switch option"], ["esc", "cancel"], ["⌘⏎", "submit"]],
+      dataBroken: "Malformed question data, cannot render: ",
+    },
+  };
+  var lang = "zh";
+  function t(key, vars) {
+    var value = UI_TEXT[lang][key];
+    if (typeof value !== "string") return value;
+    return value.replace(/\{(\w+)\}/g, function (all, name) {
+      return vars && Object.hasOwn(vars, name) ? String(vars[name]) : all;
+    });
+  }
+
+  /* ======================= 数据与状态 ======================= */
+  var DATA;
+  try {
+    DATA = JSON.parse(document.getElementById("xpi-data").textContent);
+  } catch (error) {
+    document.getElementById("content").textContent = t("dataBroken") + error.message;
+    return;
+  }
+  var QUESTIONS = DATA.questionnaire.questions;
+  var ANSWERABLE = QUESTIONS.filter(function (q) { return q.type !== "info"; });
+  var TOTAL_PAGES = QUESTIONS.length + 1; // 末页为汇总页
+  var REVIEW_INDEX = QUESTIONS.length;
+
+  var state = {
+    variant: "step",       // 默认分步
+    page: 0,
+    answers: {},           // single: string; multi: string[]
+    drafts: {},            // 自定义输入的草稿
+    feedback: "",          // 汇总页补充反馈
+    errors: {},
+  };
+  var content = document.getElementById("content");
+  var inner = document.getElementById("inner");
+
+  /* ======================= 工具 ======================= */
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text != null) node.textContent = text;
+    return node;
+  }
+  function badge(text, cls) { return el("span", "badge " + (cls || ""), text); }
+  function typeLabel(type) {
+    return { single: t("typeSingle"), multi: t("typeMulti"), text: t("typeText"), info: t("typeInfo") }[type] || type;
+  }
+  function draftOf(id) { return typeof state.drafts[id] === "string" ? state.drafts[id] : ""; }
+  function isAnswered(q) {
+    var value = state.answers[q.id];
+    if (q.type === "multi") return Array.isArray(value) && value.length > 0;
+    if (q.type === "single") return typeof value === "string" && value.trim().length > 0;
+    if (q.type === "text") return typeof value === "string" && value.trim().length > 0;
+    return false;
+  }
+  function hasCustom(q) { return q.type === "single" || q.type === "multi"; }
+  function customValue(q) {
+    return draftOf(q.id).trim();
+  }
+
+  /* 从当前 DOM + 草稿重算该题答案 (自定义与选项互斥/叠加的唯一真源) */
+  function recompute(q) {
+    if (!hasCustom(q)) return;
+    var box = inner.querySelector('.q[data-qid="' + CSS.escape(q.id) + '"]');
+    if (!box) return;
+    var custom = box.querySelector('.opt.is-custom input');
+    var selected = Array.prototype.slice
+      .call(box.querySelectorAll('.opt:not(.is-custom) input:checked'))
+      .map(function (node) { return node.value; })
+      .concat(custom && custom.checked ? ["__custom"] : []);
+    if (q.type === "single") {
+      state.answers[q.id] = selected[0] === "__custom" ? customValue(q) : selected[0];
+      if (selected[0] === "__custom" && customValue(q) === "") delete state.answers[q.id];
+      return;
+    }
+    var labels = selected.filter(function (item) { return item !== "__custom"; });
+    if (custom && custom.checked && customValue(q) !== "") labels.push(customValue(q));
+    if (labels.length > 0) state.answers[q.id] = labels;
+    else delete state.answers[q.id];
+  }
+
+  /* ======================= 渲染 ======================= */
+  function optionNode(q, option) {
+    var wrap = el("label", "opt");
+    var input = document.createElement("input");
+    input.type = q.type === "multi" ? "checkbox" : "radio";
+    input.name = q.id;
+    input.value = option.label;
+    var current = state.answers[q.id];
+    input.checked = q.type === "multi"
+      ? Array.isArray(current) && current.indexOf(option.label) >= 0
+      : current === option.label;
+
+    var body = el("span", "opt-body");
+    var title = el("span", "opt-title", option.label);
+    if (option.recommended) title.appendChild(badge(t("badgeRecommended"), "rec"));
+    body.appendChild(title);
+    if (option.description) body.appendChild(el("p", "opt-desc", option.description));
+    if (option.preview) body.appendChild(el("pre", "opt-prev", option.preview));
+    wrap.append(input, body);
+    return wrap;
+  }
+
+  function customNode(q) {
+    var draft = draftOf(q.id);
+    var current = state.answers[q.id];
+    var active = q.type === "multi"
+      ? Array.isArray(current) && draft !== "" && current.indexOf(draft) >= 0
+      : current === draft && draft !== "";
+
+    var wrap = el("label", "opt is-custom");
+    var input = document.createElement("input");
+    input.type = q.type === "multi" ? "checkbox" : "radio";
+    input.name = q.id;
+    input.value = "__custom";
+    input.checked = active;
+
+    var body = el("span", "opt-body");
+    body.appendChild(el("span", "opt-title", t("customTitle")));
+    wrap.append(input, body);
+
+    var box = el("div", "custom-wrap");
+    var area = document.createElement("textarea");
+    area.className = "custom-input";
+    area.rows = 2;
+    area.placeholder = t("customPlaceholder");
+    area.value = draft;
+    area.setAttribute("aria-label", t("customTitle") + " " + q.prompt);
+    box.appendChild(area);
+    return { wrap: wrap, box: box, area: area };
+  }
+
+  function questionNode(q, order) {
+    var section = el("section", "q" + (state.errors[q.id] ? " err" : ""));
+    section.dataset.qid = q.id;
+
+    var head = el("div", "q-head");
+    head.appendChild(el("span", "q-num", "Q" + order));
+    head.appendChild(el("span", "badge", typeLabel(q.type)));
+    if (q.type !== "info") {
+      head.appendChild(badge(q.required ? t("badgeRequired") : t("badgeOptional"), q.required ? "req" : ""));
+    }
+    section.appendChild(head);
+
+    if (q.type === "info") {
+      section.appendChild(el("p", "q-note", q.prompt));
+      return section;
+    }
+
+    section.appendChild(el("p", "q-prompt", q.prompt));
+
+    if (q.type === "text") {
+      var area = document.createElement("textarea");
+      area.className = "q-input";
+      area.name = q.id;
+      area.rows = 3;
+      area.placeholder = q.required ? t("textPlaceholder") : t("textPlaceholderOptional");
+      area.value = typeof state.answers[q.id] === "string" ? state.answers[q.id] : "";
+      section.appendChild(area);
+    } else {
+      var list = el("div", "opts");
+      q.options.forEach(function (option) { list.appendChild(optionNode(q, option)); });
+      var custom = customNode(q);
+      list.appendChild(custom.wrap);
+      list.appendChild(custom.box);
+      section.appendChild(list);
+    }
+    section.appendChild(el("p", "q-err", t("errorRequired")));
+    return section;
+  }
+
+  function thumbNode(q, order) {
+    var button = el("button", "thumb");
+    button.type = "button";
+    button.dataset.goto = String(QUESTIONS.indexOf(q));
+    button.appendChild(el("span", "thumb-no", "Q" + order));
+    button.appendChild(el("span", "thumb-q", q.prompt));
+    if (q.type === "info") {
+      button.appendChild(el("span", "thumb-a empty", typeLabel(q.type)));
+      return button;
+    }
+    var value = state.answers[q.id];
+    var text = Array.isArray(value) ? value.join(" · ") : value;
+    var answered = isAnswered(q);
+    button.appendChild(el("span", "thumb-a" + (answered ? "" : " empty"), answered ? text : t("emptyAnswer")));
+    return button;
+  }
+
+  function reviewNode() {
+    var section = el("section", "q q-review");
+    var head = el("div", "q-head");
+    head.appendChild(el("span", "q-num", "✓"));
+    section.appendChild(head);
+    section.appendChild(el("p", "q-prompt", t("reviewLead")));
+
+    var list = el("div", "review-list");
+    QUESTIONS.forEach(function (q) {
+      list.appendChild(thumbNode(q, QUESTIONS.indexOf(q) + 1));
+    });
+    section.appendChild(list);
+
+    section.appendChild(el("p", "review-ask", t("reviewFeedback")));
+    var area = document.createElement("textarea");
+    area.className = "q-input";
+    area.id = "review-feedback";
+    area.rows = 3;
+    area.placeholder = t("reviewFeedbackPlaceholder");
+    area.value = state.feedback;
+    section.appendChild(area);
+    return section;
+  }
+
+  function render() {
+    inner.textContent = "";
+    if (state.variant === "step") {
+      var page = Math.min(state.page, REVIEW_INDEX);
+      inner.appendChild(page === REVIEW_INDEX ? reviewNode() : questionNode(QUESTIONS[page], page + 1));
+    } else {
+      QUESTIONS.forEach(function (q) { inner.appendChild(questionNode(q, QUESTIONS.indexOf(q) + 1)); });
+      inner.appendChild(reviewNode());
+    }
+    var textArea = inner.querySelector(".q[data-qid] .q-input");
+    if (state.variant === "step" && textArea && QUESTIONS[state.page] && QUESTIONS[state.page].type === "text") {
+      setTimeout(function () { textArea.focus(); }, 0);
+    }
+    syncStepbar();
+    syncFooter();
+  }
+
+  function syncStepbar() {
+    var count = document.getElementById("step-count");
+    if (state.variant === "stack") count.textContent = t("allQuestions");
+    else if (state.page === REVIEW_INDEX) count.textContent = t("reviewStep", { n: TOTAL_PAGES });
+    else count.textContent = t("stepOf", { i: state.page + 1, n: TOTAL_PAGES });
+
+    var dots = document.getElementById("dots");
+    dots.textContent = "";
+    QUESTIONS.forEach(function (q, index) {
+      var dot = el("button", "gd-dot", String(index + 1));
+      dot.type = "button";
+      dot.dataset.goto = String(index);
+      var current = state.variant === "step" && index === state.page;
+      dot.dataset.state = current ? "current" : (isAnswered(q) ? "answered" : "idle");
+      if (current) dot.setAttribute("aria-current", "step");
+      dots.appendChild(dot);
+    });
+    var reviewDot = el("button", "gd-dot", "✓");
+    reviewDot.type = "button";
+    reviewDot.dataset.goto = String(REVIEW_INDEX);
+    reviewDot.dataset.state = state.variant === "step" && state.page === REVIEW_INDEX ? "current" : "idle";
+    reviewDot.setAttribute("aria-label", t("reviewCount", { n: TOTAL_PAGES }));
+    dots.appendChild(reviewDot);
+
+    var done = ANSWERABLE.filter(isAnswered).length;
+    var meta = document.getElementById("step-meta");
+    meta.textContent = "";
+    var parts = t("answeredOf").replace("{total}", String(ANSWERABLE.length)).split("{done}");
+    meta.appendChild(document.createTextNode(parts[0]));
+    meta.appendChild(el("b", null, String(done)));
+    meta.appendChild(document.createTextNode(parts[1] || ""));
+    document.getElementById("track-fill").style.width = (done / ANSWERABLE.length) * 100 + "%";
+  }
+
+  function syncFooter() {
+    var step = state.variant === "step";
+    document.getElementById("b-prev").classList.toggle("hidden", !step || state.page === 0);
+    document.getElementById("b-submit").textContent = step && state.page < REVIEW_INDEX ? t("next") : t("submit");
+    document.getElementById("b-prev").textContent = t("prev");
+    document.getElementById("b-cancel").textContent = t("cancel");
+
+    var hints = document.getElementById("hints");
+    var pairs = t(step ? "hintStep" : "hintStack");
+    hints.textContent = "";
+    pairs.forEach(function (pair, index) {
+      if (index > 0) hints.appendChild(document.createTextNode(" · "));
+      var label = index === 0 && step && state.page === REVIEW_INDEX ? t("confirm") : pair[1];
+      hints.appendChild(el("kbd", null, pair[0]));
+      hints.appendChild(document.createTextNode(" " + label));
+    });
+  }
+
+  function syncChrome() {
+    document.getElementById("round-chip").textContent = t("round", { n: DATA.round });
+    document.getElementById("t-lang").textContent = t("lang");
+    document.getElementById("t-lang").title = t("langTitle");
+    document.getElementById("t-variant").textContent = state.variant === "step" ? t("variant") : t("stepMode");
+  }
+
+  /* ======================= 校验与提交 ======================= */
+  function firstUnanswered() {
+    return ANSWERABLE.filter(function (q) { return q.required && !isAnswered(q); })[0];
+  }
+
+  function focusQuestion(q) {
+    state.errors = {};
+    state.errors[q.id] = true;
+    var index = QUESTIONS.indexOf(q);
+    if (state.variant === "step" && index !== state.page) {
+      state.page = index;
+      render();
+    } else {
+      inner.querySelectorAll(".q[data-qid]").forEach(function (node) {
+        node.classList.toggle("err", !!state.errors[node.dataset.qid]);
+      });
+    }
+    var target = inner.querySelector('.q[data-qid="' + CSS.escape(q.id) + '"]');
+    if (target) target.scrollIntoView({ block: "center" });
+  }
+
+  function collect() {
+    var answers = {};
+    ANSWERABLE.forEach(function (q) {
+      if (isAnswered(q)) answers[q.id] = state.answers[q.id];
+    });
+    if (state.feedback.trim() !== "") answers._review = state.feedback.trim();
+    return answers;
+  }
+
+  function emit(payload) {
+    // 生产路径: glimpse 的桥. 原型在浏览器里没有 window.glimpse, 退化为回执浮层。
+    if (window.glimpse && typeof window.glimpse.send === "function") {
+      window.glimpse.send(payload);
+      return;
+    }
+    var box = el("pre", "opt-prev");
+    box.style.cssText = "position:fixed;left:24px;right:24px;bottom:24px;max-height:44vh;background:var(--popover);border-color:var(--primary)";
+    box.textContent = "window.glimpse.send(" + JSON.stringify(payload, null, 2) + ")";
+    document.body.appendChild(box);
+    setTimeout(function () { box.remove(); }, 6000);
+  }
+
+  function submit() {
+    var missing = firstUnanswered();
+    if (missing) { focusQuestion(missing); return; }
+    emit({ round: DATA.round, cancelled: false, answers: collect() });
+  }
+
+  function goNext() {
+    if (state.page >= REVIEW_INDEX) { submit(); return; }
+    var current = QUESTIONS[state.page];
+    if (current && current.required && !isAnswered(current)) { focusQuestion(current); return; }
+    state.page += 1;
+    render();
+  }
+
+  function goto(index) {
+    var target = Math.max(0, Math.min(REVIEW_INDEX, index));
+    if (state.variant === "step") {
+      state.page = target;
+      render();
+      return;
+    }
+    var node = target === REVIEW_INDEX
+      ? inner.querySelector(".q-review")
+      : inner.querySelector('.q[data-qid="' + CSS.escape(QUESTIONS[target].id) + '"]');
+    if (node) node.scrollIntoView({ block: "start" });
+  }
+
+  /* ======================= 事件 ======================= */
+  content.addEventListener("change", function (event) {
+    var input = event.target;
+    if (input.classList && input.classList.contains("custom-input")) return;
+    if (!input.name) return;
+    var q = QUESTIONS.filter(function (item) { return item.id === input.name; })[0];
+    if (!q) return;
+    recompute(q);
+    clearError(q.id);
+    syncStepbar();
+    if (hasCustom(q)) {
+      var custom = inner.querySelector('.q[data-qid="' + CSS.escape(q.id) + '"] .custom-input');
+      if (custom && inner.querySelector('.q[data-qid="' + CSS.escape(q.id) + '"] .opt.is-custom input').checked) {
+        setTimeout(function () { custom.focus(); }, 0);
+      }
+    }
+  });
+
+  content.addEventListener("input", function (event) {
+    var node = event.target;
+    if (node.id === "review-feedback") { state.feedback = node.value; return; }
+    if (node.classList.contains("custom-input")) {
+      var box = node.closest(".q");
+      var owner = box ? QUESTIONS.filter(function (item) { return item.id === box.dataset.qid; })[0] : undefined;
+      if (!owner) return;
+      state.drafts[owner.id] = node.value;
+      recompute(owner);
+      clearError(owner.id);
+      syncStepbar();
+      return;
+    }
+    if (node.tagName !== "TEXTAREA") return;
+    state.answers[node.name] = node.value;
+    node.style.height = "auto";
+    node.style.height = Math.min(node.scrollHeight, 240) + "px";
+    clearError(node.name);
+    syncStepbar();
+  });
+
+  function clearError(id) {
+    delete state.errors[id];
+    var section = inner.querySelector('.q[data-qid="' + CSS.escape(id) + '"]');
+    if (section) section.classList.remove("err");
+  }
+
+  content.addEventListener("click", function (event) {
+    var thumb = event.target.closest(".thumb");
+    if (thumb) { goto(Number(thumb.dataset.goto)); }
+  });
+
+  document.getElementById("dots").addEventListener("click", function (event) {
+    var dot = event.target.closest(".gd-dot");
+    if (dot) goto(Number(dot.dataset.goto));
+  });
+
+  document.getElementById("b-submit").addEventListener("click", function () {
+    if (state.variant === "step") goNext();
+    else submit();
+  });
+  document.getElementById("b-prev").addEventListener("click", function () {
+    state.page = Math.max(0, state.page - 1);
+    render();
+  });
+  document.getElementById("b-cancel").addEventListener("click", function () {
+    emit({ round: DATA.round, cancelled: true, answers: {} });
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") { emit({ round: DATA.round, cancelled: true, answers: {} }); return; }
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) { submit(); return; }
+    if (event.key === "Enter" && state.variant === "step" && event.target.tagName !== "TEXTAREA") goNext();
+    if (event.key === "ArrowLeft" && state.variant === "step" && event.target.tagName === "BODY" && state.page > 0) {
+      state.page -= 1; render();
+    }
+    if (event.key === "ArrowRight" && state.variant === "step" && event.target.tagName === "BODY") goNext();
+  });
+
+  /* ---- [PROTO] 预览开关: 语言 / 布局 / 明暗 / 缩放, 不进生产 ---- */
+  var zoom = 1;
+  function setZoom(v) {
+    zoom = Math.min(1.5, Math.max(0.8, Math.round(v * 10) / 10));
+    document.body.style.zoom = String(zoom);
+  }
+  document.getElementById("t-lang").addEventListener("click", function () {
+    lang = lang === "zh" ? "en" : "zh";
+    document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+    syncChrome(); render();
+  });
+  document.getElementById("t-variant").addEventListener("click", function () {
+    state.variant = state.variant === "step" ? "stack" : "step";
+    state.page = 0; state.errors = {};
+    syncChrome(); render();
+  });
+  document.getElementById("t-theme").addEventListener("click", function () {
+    var root = document.documentElement;
+    root.dataset.theme = root.dataset.theme === "dark" ? "light" : "dark";
+  });
+  document.getElementById("t-in").addEventListener("click", function () { setZoom(zoom + 0.1); });
+  document.getElementById("t-out").addEventListener("click", function () { setZoom(zoom - 0.1); });
+  document.getElementById("t-reset").addEventListener("click", function () { setZoom(1); });
+
+  /* ---- 启动 ---- */
+  var root = document.documentElement;
+  root.dataset.theme = root.dataset.theme
+    || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  root.dataset.reduceMotion = String(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  root.classList.add("proto");
+  inner.style.minHeight = "100%";
+  syncChrome();
+  render();
+})();
+</script>
+</body>
+</html>
