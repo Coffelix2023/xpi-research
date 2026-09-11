@@ -1,13 +1,13 @@
 ## 1. 分支与设计基线
 
-- [ ] 1.1 从 `main` 创建 `feat/improve-glimpse-questionnaire-panel` 工作分支；用 `git branch --show-current` 确认当前分支名
-- [ ] 1.2 提交设计基线：`docs/prototypes/glimpse-questionnaire-panel.html` 与 `biome.jsonc` 中新增的 `!docs/prototypes` 忽略项；用 `git status --short` 确认只暂存了这两个文件，且 `pnpm -w run lint` 仍然全绿
+- [x] 1.1 从 `main` 创建 `feat/improve-glimpse-questionnaire-panel` 工作分支；用 `git branch --show-current` 确认当前分支名
+- [x] 1.2 提交设计基线：`docs/prototypes/glimpse-questionnaire-panel.html` 与 `biome.jsonc` 中新增的 `!docs/prototypes` 忽略项；用 `git status --short` 确认只暂存了这两个文件，且 `pnpm -w run lint` 仍然全绿
 
 ## 2. 面板模块拆分（纯重构，不改行为）
 
-- [ ] 2.1 新建 `src/glimpse-panel.ts`，把 `src/glimpse.ts` 中现有的面板模板原样平移，按三段导出：`GLIMPSE_PANEL_CSS`、`GLIMPSE_PANEL_SCRIPT` 与 `renderGlimpseQuestionnaire(questionnaire, round)`；导出 `renderGlimpseQuestionnaire` 后 `pnpm typecheck` 通过
-- [ ] 2.2 修改 `src/glimpse.ts` 改为从新模块导入 `renderGlimpseQuestionnaire`，删除本地模板与不再使用的 `escapeHtml`；确认 `pnpm typecheck` 与 `pnpm test` 在未改动测试的情况下通过，证明行为未变
-- [ ] 2.3 新增 `src/glimpse-panel.test.ts`，为重构后的实现建立行为基线：断言数据以 `<script type="application/json">` 嵌入、渲染结果包含问卷 JSON、且不含可执行的答案数据；运行 `pnpm test` 确认新用例通过
+- [x] 2.1 新建 `src/glimpse-panel.ts`，把 `src/glimpse.ts` 中现有的面板模板原样平移，按三段导出：`GLIMPSE_PANEL_CSS`、`GLIMPSE_PANEL_SCRIPT` 与 `renderGlimpseQuestionnaire(questionnaire, round)`；导出 `renderGlimpseQuestionnaire` 后 `pnpm typecheck` 通过
+- [x] 2.2 修改 `src/glimpse.ts` 改为从新模块导入 `renderGlimpseQuestionnaire`，删除本地模板与不再使用的 `escapeHtml`；确认 `pnpm typecheck` 与 `pnpm test` 在未改动测试的情况下通过，证明行为未变
+- [x] 2.3 新增 `src/glimpse-panel.test.ts`，为重构后的实现建立行为基线：断言数据以 `<script type="application/json">` 嵌入、渲染结果包含问卷 JSON、且不含可执行的答案数据；运行 `pnpm test` 确认新用例通过
 
 ## 3. 面板模板移植
 
