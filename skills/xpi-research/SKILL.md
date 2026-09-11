@@ -34,7 +34,10 @@ database, GitHub client, or cross-session memory.
    and text questions without previews. Use `presentation: "visual"` for
    multi-select, information, previews, or comparisons that benefit from
    richer presentation. A recommendation is useful, but the user's answer
-   remains authoritative.
+   remains authoritative. Every option question also accepts a custom answer,
+   and the panel closes with a review step that repeats all answers and adds
+   one optional overall comment. Read that comment from `feedback`; it is not
+   an answer to any question.
 6. **Produce the MVP handoff.** End with four labeled sections: confirmed
    facts, agent inferences, unresolved questions, and recommended next steps.
    State the smallest useful MVP, its acceptance checks, and what is deferred.
@@ -50,7 +53,25 @@ empty answer.
 Keep questionnaires bounded: no more than four questions, no more than eight
 options per choice, and no oversized prompts, previews, or answer text. Use
 option descriptions for short trade-offs and previews only when the added
-context changes the choice.
+context changes the choice. Keep option labels short: the panel renders the
+label as a heading and the description as supporting text, so a paragraph in
+the label reads as a wall of text.
+
+### Reading answers
+
+An option question accepts a custom answer as well as its labels, so an answer
+is not guaranteed to match one of your options:
+
+- `single`: one of your option labels, or the user's own text.
+- `multi`: your option labels in the order you declared them, plus at most one
+  free-text entry appended at the end.
+- `text`: the user's own text.
+- `feedback`: the optional overall comment from the review step. It answers no
+  question; keep it out of per-question analysis.
+
+Match an answer against your labels first. When it matches nothing, treat it as
+the user's own wording and quote it as written instead of forcing it into an
+option or discarding it.
 
 ## Existing methods
 

@@ -98,6 +98,36 @@ The color palette is built for terminal environments with graceful degradation f
 - **Warning (`{colors.warning}`)**: Warnings, recoverable issues, and attention-required indicators.
 - **Error (`{colors.error}`)**: Fatal errors, validation failures, and blocking issues.
 
+### Glimpse Panel Tokens
+
+The dual-track Glimpse micro-window does not use the terminal palette above. It carries its own two semantic token sets, supplied as shadcn-style palettes and mapped onto the panel's CSS variables:
+
+| Track | Selector | Palette |
+| :--- | :--- | :--- |
+| Light | `:root` | Warm neutral canvas with a green primary |
+| Dark | `[data-theme="dark"]` | Warm dark canvas with an orange primary |
+
+Two properties keep the two sets honest:
+
+- **Dark only overrides tokens the light set already declares.** A dark-only token is a token nobody sees in light mode; the panel test enforces this.
+- **Components reference tokens only.** The panel ships no color literals, so a theme swap cannot leave a stray color behind. The panel test rejects `#` and `rgb(` in the stylesheet.
+
+Semantic mapping used by the panel:
+
+| Token | Panel usage |
+| :--- | :--- |
+| `--background` | Content canvas behind cards and the step bar |
+| `--popover` | Shell surface, composited with translucency |
+| `--foreground` | Prompts, option labels, button text |
+| `--muted` | Option cards, badges, inputs, skip hints |
+| `--muted-foreground` | Descriptions, previews, meta counters |
+| `--accent` | Hover and pressed feedback on flat controls |
+| `--primary` | Current step, selected option, primary action |
+| `--destructive` | Required-field errors and missing-bridge notice |
+| `--border` / `--input` | Hairlines and field outlines |
+| `--ring` | Keyboard focus ring |
+| `--radius` | Derives `--radius-sm`/`-md`/`-lg` for the whole shell |
+
 ## Typography
 
 Typography in the terminal is governed by monospaced cell grids. Hierarchy is established through ANSI text attributes (bold, dim, underline, reverse video) and font sizing where supported.
@@ -108,6 +138,15 @@ Typography in the terminal is governed by monospaced cell grids. Hierarchy is es
 - **Label (`{typography.label}`)**: Compact uppercase or bracketed badges (e.g., `[INFO]`, `[ERROR]`, `DONE`) with bold or muted attributes.
 
 Never rely solely on color or font style to convey critical status; always pair visual styling with explicit text labels or Unicode symbols.
+
+### Glimpse Panel Fonts
+
+The Glimpse panel declares its font tokens with the full fallback chain, and **loads no webfont**. The native window has no network access, so a webfont request would either stall the first paint or flash unstyled text. A named family that is not installed is expected, not a bug: the panel resolves to the platform UI font and to the platform monospace font.
+
+- `--font-sans` carries the interface copy and question prompts.
+- `--font-mono` carries option previews and keyboard hints, where column alignment matters.
+
+Anyone tempted to "fix" a missing font by adding a hosted font link should treat that as a regression: it trades a cosmetic difference for a white flash on every open.
 
 ## Layout
 
@@ -168,6 +207,17 @@ For comprehensive status inspections, follows a **4-tier vertical information ar
 ### 6. Key-Value Row (`{components.key-value}`)
 Aligned label-value pairs with dimmed muted keys and crisp ink values.
 
+
+### 7. Questionnaire Panel (dual-track interactive window)
+
+The Glimpse micro-window that collects research answers follows the modal architecture above and adds four rules:
+
+- **Stepped by default.** One question per screen, with a step bar that carries the position counter, one activation dot per step plus the review step, and the answered count. A stacked layout that shows every question in one scroll is available, and both layouts share the same validation and submission behaviour.
+- **Option cards, not lines.** Each option is a card whose title carries the label, whose sub-text carries the description, and whose monospace well carries the preview. Anything longer than a short phrase belongs in the description: a paragraph in the label renders as a wall of text.
+- **A way out of every choice.** Each option question offers a custom entry that reveals a text input, exclusive for single questions and additive for multiple-choice ones.
+- **A review step closes the panel.** It lists every step, marks unanswered questions, jumps back to any of them, and owns its own comment field, which travels outside the answer map.
+
+The footer stays pinned while content scrolls, and its actions carry a hit area large enough to read at a glance. Keyboard contract: `Esc` cancels, `Enter` advances, `Cmd/Ctrl+Enter` submits, `Tab` and arrows work inside the option groups.
 ## Do's and Don'ts
 
 ### Do's (Mandatory Practices)
@@ -186,3 +236,6 @@ Aligned label-value pairs with dimmed muted keys and crisp ink values.
 - **Don't** use neon RGB flashes, heavy full-screen clearing, or excessive blinking text.
 - **Don't** mix incompatible box-drawing character sets (e.g. mixing double-line `╔` with rounded `╭` in a single component).
 - **Don't** hardcode absolute developer-machine file paths for assets or binaries.
+- **Don't** write color or radius literals into native window templates; reference the panel tokens so both theme tracks stay intact.
+- **Don't** load a hosted webfont or any remote asset into a native helper window.
+- **Don't** put a paragraph in an option label; the label is a heading, the description is for prose.
