@@ -103,7 +103,12 @@ export function parseGlimpseResult(
   const payload = parsePayload(raw);
   if (!payload || payload.cancelled === true) return undefined;
   if (!isRecord(payload.answers)) return undefined;
-  return normalizeAnswers(questionnaire, payload.answers as RawAnswers, round);
+  return normalizeAnswers(
+    questionnaire,
+    payload.answers as RawAnswers,
+    round,
+    payload.feedback,
+  );
 }
 
 export async function promptWithGlimpse(

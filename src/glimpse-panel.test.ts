@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { parseGlimpseResult } from "./glimpse.ts";
 import {
   GLIMPSE_PANEL_CSS,
   GLIMPSE_PANEL_SCRIPT,
@@ -232,5 +233,61 @@ describe("panel navigation shell", () => {
     expect(GLIMPSE_PANEL_SCRIPT).toContain("prefers-contrast: more");
     expect(GLIMPSE_PANEL_CSS).toContain('[data-reduce-motion="true"]');
     expect(GLIMPSE_PANEL_CSS).toContain('[data-contrast="true"]');
+  });
+
+  it("accepts the payload shape the panel emits", () => {
+    const payload = {
+      cancelled: false,
+      feedback: "please shorten the option labels",
+      round: 5,
+      answers: {
+        pick: "written by hand",
+        many: [
+          "X",
+          "extra request",
+        ],
+      },
+    };
+
+    expect(parseGlimpseResult(payload, questionnaire, 5)).toEqual(payload);
+  });
+
+  it("accepts a payload without review feedback", () => {
+    const result = parseGlimpseResult(
+      {
+        cancelled: false,
+        round: 8,
+        answers: {
+          pick: "A",
+          many: [
+            "Y",
+          ],
+        },
+      },
+      questionnaire,
+      8,
+    );
+
+    expect(result?.answers).toEqual({
+      pick: "A",
+      many: [
+        "Y",
+      ],
+    });
+    expect(result).not.toHaveProperty("feedback");
+  });
+
+  it("reports cancellation as no payload", () => {
+    expect(
+      parseGlimpseResult(
+        {
+          answers: {},
+          cancelled: true,
+          round: 2,
+        },
+        questionnaire,
+        2,
+      ),
+    ).toBeUndefined();
   });
 });
