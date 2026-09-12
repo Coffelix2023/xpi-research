@@ -172,6 +172,7 @@ describe("panel text dictionary", () => {
       GLIMPSE_PANEL_TEXT.en.submit,
       GLIMPSE_PANEL_TEXT.zh.next,
       GLIMPSE_PANEL_TEXT.zh.prev,
+      GLIMPSE_PANEL_TEXT.zh.noAnswerNeeded,
     ]) {
       expect(script).not.toContain(`"${copy}"`);
     }
@@ -237,6 +238,15 @@ describe("panel navigation shell", () => {
     expect(GLIMPSE_PANEL_SCRIPT).toContain("if (state.page >= REVIEW_INDEX) {");
     expect(GLIMPSE_PANEL_SCRIPT).not.toContain("const last =");
     expect(GLIMPSE_PANEL_SCRIPT).not.toContain("state.page >= QUESTIONS.length - 1");
+  });
+
+  it("marks information steps as needing no answer", () => {
+    expect(GLIMPSE_PANEL_SCRIPT).toContain('el("p", "q-hint", t("noAnswerNeeded"))');
+    expect(GLIMPSE_PANEL_SCRIPT).toContain(
+      'el("span", "thumb-a empty", t("noAnswerNeeded"))',
+    );
+    expect(GLIMPSE_PANEL_SCRIPT).toContain('current.type !== "info" &&');
+    expect(GLIMPSE_PANEL_CSS).toContain(".q-hint {");
   });
 
   it("prefers system appearance and honours motion and contrast preferences", () => {

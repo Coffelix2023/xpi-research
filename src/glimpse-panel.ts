@@ -31,6 +31,7 @@ interface GlimpsePanelText {
   lang: string;
   langTitle: string;
   next: string;
+  noAnswerNeeded: string;
   prev: string;
   reviewCount: string;
   reviewFeedback: string;
@@ -75,6 +76,7 @@ export const GLIMPSE_PANEL_TEXT = {
     lang: "中",
     langTitle: "切换到简体中文",
     next: "Next →",
+    noAnswerNeeded: "Nothing to answer",
     prev: "← Back",
     reviewCount: "Review / {n}",
     reviewFeedback: "Anything else to add?",
@@ -145,6 +147,7 @@ export const GLIMPSE_PANEL_TEXT = {
     lang: "EN",
     langTitle: "Switch to English",
     next: "下一步 →",
+    noAnswerNeeded: "无需作答",
     prev: "← 上一步",
     reviewCount: "确认 / {n}",
     reviewFeedback: "还有别的补充吗?",
@@ -372,6 +375,7 @@ input, textarea { -webkit-user-select: text; user-select: text; font: inherit; }
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
 }
+.q-hint { margin-top: 10px; font-size: 12.5px; color: var(--muted-foreground); }
 .q-err { display: none; margin-top: 9px; font-size: 12.5px; color: var(--destructive); }
 .q.err .q-err { display: block; }
 .q.err .opt, .q.err .q-input { border-color: var(--destructive); }
@@ -653,6 +657,7 @@ const PANEL_SCRIPT_BODY = `(() => {
 
     if (question.type === "info") {
       section.append(el("p", "q-note", question.prompt));
+      section.append(el("p", "q-hint", t("noAnswerNeeded")));
       return section;
     }
 
@@ -682,7 +687,7 @@ const PANEL_SCRIPT_BODY = `(() => {
     button.dataset.goto = String(QUESTIONS.indexOf(question));
     button.append(el("span", "thumb-no", "Q" + order), el("span", "thumb-q", question.prompt));
     if (question.type === "info") {
-      button.append(el("span", "thumb-a empty", typeLabel(question.type)));
+      button.append(el("span", "thumb-a empty", t("noAnswerNeeded")));
       return button;
     }
     const value = state.answers[question.id];
@@ -864,7 +869,12 @@ const PANEL_SCRIPT_BODY = `(() => {
     readStep();
     state.error = "";
     const current = QUESTIONS[state.page];
-    if (current && current.required && !isAnswered(current)) {
+    if (
+      current &&
+      current.type !== "info" &&
+      current.required &&
+      !isAnswered(current)
+    ) {
       state.error = current.id;
       render();
       return;
