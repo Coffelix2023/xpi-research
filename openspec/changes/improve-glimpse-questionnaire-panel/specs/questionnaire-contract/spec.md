@@ -2,7 +2,7 @@
 
 ### Requirement: The system SHALL normalize answers into a stable bounded result
 
-The system SHALL normalize answers into a stable bounded result. 单选答案必须是所选 option label，或该问题自定义入口提交的非空文本；多选答案必须是去重后的选项集合，按问卷选项定义顺序输出，最多再附加一个自定义文本项。自定义文本与文本答案必须去除首尾空白，并同样受 2,000 字符上限约束。必答问题没有有效答案时不能提交；可选问题未回答时必须从 `answers` 中省略。整个 JSON result（结果）文本最多 8 KiB。
+The system SHALL normalize answers into a stable bounded result. 单选答案必须是所选 option label，或该问题自定义入口提交的非空文本；多选答案必须是去重后的选项集合，按问卷选项定义顺序输出，最多再附加一个自定义文本项。自定义文本与文本答案必须去除首尾空白，并同样受 2,000 字符上限约束。必答问题没有有效答案时不能提交；可选问题未回答时必须从 `answers` 中省略。信息类问题永远不产生答案，因此不得参与必答校验。整个 JSON result（结果）文本最多 8 KiB。
 
 #### Scenario: Answers are normalized deterministically
 - **WHEN** the user submits valid selections and text answers
@@ -11,6 +11,10 @@ The system SHALL normalize answers into a stable bounded result. 单选答案必
 #### Scenario: Required answer is missing
 - **WHEN** the user attempts to submit while a required question has no valid answer
 - **THEN** submission is rejected and the questionnaire remains available for correction
+
+#### Scenario: Information questions are never required
+- **WHEN** a questionnaire marks an information question as required and the user submits every answerable question
+- **THEN** the submission is accepted and the result omits that question from `answers` instead of failing
 
 #### Scenario: Custom text answer is accepted
 - **WHEN** the user selects the custom entry of a single or multi question and submits non-empty text that is not any option label

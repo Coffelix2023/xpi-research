@@ -22,6 +22,7 @@ Glimpse 面板是 visual 问卷的主要呈现面，但当前 `renderGlimpseQues
 - 修正分步流程的终点：最后一个问题的主操作改为前进到汇总步骤，使汇总页与反馈输入在默认路径上可达。
 - 信息类问题不参与作答校验，并在分步布局与汇总步骤中显示「无需作答」，不再依赖问题类型名。
 - 删除 `GlimpsePromptOptions` 中三个 `glimpseui` 并不支持的选项（`theme`、`reduceMotion`、`zoom`），它们此前被静默忽略。
+- 宿主侧的规范化不再对信息类问题执行必答校验，避免用户正常提交后工具报出笼统的交互失败。
 - 明确不做：quick 路径与 TUI fallback 组件不增加自定义入口；不注入系统强调色（`prompt()` 拿不到 window 句柄）；不加载外部 webfont。
 
 ## Capabilities
