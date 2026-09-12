@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { renderGlimpseQuestionnaire } from "./glimpse-panel.ts";
@@ -65,6 +66,8 @@ export async function loadGlimpse(
 ): Promise<GlimpseModule | null> {
   for (const candidate of paths) {
     if (!path.isAbsolute(candidate)) continue;
+    // Not installed at this location is not a broken path: skip it without noise.
+    if (!existsSync(candidate)) continue;
     try {
       // biome-ignore lint/performance/noAwaitInLoops: Glimpse candidates must be tried in order.
       const moduleValue: unknown = await import(pathToFileURL(candidate).href);
@@ -73,7 +76,7 @@ export async function loadGlimpse(
         asGlimpseModule(moduleRecord?.default) ?? asGlimpseModule(moduleValue);
       if (loaded) return loaded;
     } catch (error) {
-      // Capability detection is intentionally fail-closed; warn once so a broken path is not invisible.
+      // The candidate exists but cannot load, which is a real breakage worth surfacing.
       console.warn(
         `[glimpse] failed to load candidate ${candidate}: ${error instanceof Error ? error.message : String(error)}`,
       );
