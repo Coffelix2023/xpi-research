@@ -4,13 +4,15 @@ import { renderGlimpseQuestionnaire } from "./glimpse-panel.ts";
 import { normalizeAnswers } from "./questionnaire.ts";
 import type { Questionnaire, QuestionnaireResult, RawAnswers } from "./types.ts";
 
+/**
+ * Options the extension actually passes. `glimpseui`'s `open()` maps width,
+ * height and title onto its host; theme, reduce-motion and zoom are not part of
+ * that option surface, so the panel decides them itself.
+ */
 export interface GlimpsePromptOptions {
   height?: number;
-  reduceMotion?: boolean;
-  theme?: "system" | "light" | "dark";
   title?: string;
   width?: number;
-  zoom?: boolean;
 }
 
 export interface GlimpseModule {
@@ -132,11 +134,8 @@ export async function promptWithGlimpse(
   try {
     const raw = await glimpse.prompt(renderGlimpseQuestionnaire(questionnaire, round), {
       height: 600,
-      reduceMotion: true,
-      theme: "system",
       title: "xpi-research",
       width: 800,
-      zoom: true,
     });
     const result = parseGlimpseResult(raw, questionnaire, round);
     return result
