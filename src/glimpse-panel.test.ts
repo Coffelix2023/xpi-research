@@ -233,6 +233,12 @@ describe("panel navigation shell", () => {
     );
   });
 
+  it("ends the stepped flow on the review step instead of submitting", () => {
+    expect(GLIMPSE_PANEL_SCRIPT).toContain("if (state.page >= REVIEW_INDEX) {");
+    expect(GLIMPSE_PANEL_SCRIPT).not.toContain("const last =");
+    expect(GLIMPSE_PANEL_SCRIPT).not.toContain("state.page >= QUESTIONS.length - 1");
+  });
+
   it("prefers system appearance and honours motion and contrast preferences", () => {
     expect(GLIMPSE_PANEL_SCRIPT).toContain("prefers-color-scheme: dark");
     expect(GLIMPSE_PANEL_SCRIPT).toContain("prefers-reduced-motion: reduce");

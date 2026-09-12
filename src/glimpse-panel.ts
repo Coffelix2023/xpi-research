@@ -791,12 +791,11 @@ const PANEL_SCRIPT_BODY = `(() => {
   function syncFooter() {
     const step = state.variant === "step";
     const onReview = step && state.page === REVIEW_INDEX;
-    const last = state.page >= QUESTIONS.length - 1;
 
     document.getElementById("b-prev").classList.toggle("hidden", !step || state.page === 0);
     document.getElementById("b-prev").textContent = t("prev");
     document.getElementById("b-cancel").textContent = t("cancel");
-    document.getElementById("b-submit").textContent = step && !onReview && !last ? t("next") : t("submit");
+    document.getElementById("b-submit").textContent = step && !onReview ? t("next") : t("submit");
 
     const hints = document.getElementById("hints");
     hints.textContent = "";
@@ -870,7 +869,7 @@ const PANEL_SCRIPT_BODY = `(() => {
       render();
       return;
     }
-    if (state.page >= QUESTIONS.length - 1) {
+    if (state.page >= REVIEW_INDEX) {
       submit();
       return;
     }
