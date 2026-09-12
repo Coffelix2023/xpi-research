@@ -6,6 +6,8 @@ Glimpse 面板是 visual 问卷的主要呈现面，但当前 `renderGlimpseQues
 
 这两点叠加使本扩展最关键的交互面既不可读也不可用，需要在继续扩展研究流程之前修正。
 
+合并后的真机验收又暴露出同一处交互的两个缺口：分步流程的最后一个问题直接提交，汇总步骤只能靠步骤条末位的 ✓ 圆点进入，默认路径下用户既看不到汇总页也看不到反馈框，`feedback` 因此恒为空，而技能文档已经教 Agent 去读它；同时，声明为必答的信息类问题会让主操作按钮静默失效——校验认为必答未满足，信息类问题的渲染分支却提前返回，连内联错误都不显示。
+
 ## What Changes
 
 - 重构 Glimpse 面板呈现：问题分节（题号、类型徽标、必答标记）、选项卡化（label / description / preview 三层视觉分层）、步骤条（步骤计数、可点击步骤圆点、作答进度）、固定底栏与加大的操作按钮。
@@ -17,6 +19,9 @@ Glimpse 面板是 visual 问卷的主要呈现面，但当前 `renderGlimpseQues
 - 契约扩展（向后兼容，非破坏）：单选与多选接受自定义文本答案（仍受 2,000 字符限制），`QuestionnaireResult` 新增可选 `feedback` 字段承载汇总页反馈。
 - 修复 Glimpse 提交桥：页面改为通过 `window.glimpse.send` 回传，使提交与取消真正到达宿主。
 - 面板模板从 `src/glimpse.ts` 拆出为独立模块，使 `glimpse.ts` 只负责加载、调用与结果解析。
+- 修正分步流程的终点：最后一个问题的主操作改为前进到汇总步骤，使汇总页与反馈输入在默认路径上可达。
+- 信息类问题不参与作答校验，并在分步布局与汇总步骤中显示「无需作答」，不再依赖问题类型名。
+- 删除 `GlimpsePromptOptions` 中三个 `glimpseui` 并不支持的选项（`theme`、`reduceMotion`、`zoom`），它们此前被静默忽略。
 - 明确不做：quick 路径与 TUI fallback 组件不增加自定义入口；不注入系统强调色（`prompt()` 拿不到 window 句柄）；不加载外部 webfont。
 
 ## Capabilities
@@ -39,4 +44,5 @@ Glimpse 面板是 visual 问卷的主要呈现面，但当前 `renderGlimpseQues
 - **Docs**: `DESIGN.md` 记录两套令牌的来源与语义映射；`skills/xpi-research/SKILL.md` 说明自定义选项、汇总页与 `feedback` 字段。
 - **Tooling**: `biome.jsonc` 增加 `!docs/prototypes`，让浏览器评审用的设计原型不进入 lint/交付面。
 - **Runtime**: 不新增依赖；Glimpse 不可用时仍按既有规则降级到 Pi 原生 TUI。
+- **Follow-up（合并后发现）**: `src/glimpse-panel.ts`（末题主操作、信息类问题校验与文案）、`src/glimpse.ts`（移除不受支持的 prompt 选项）、`src/glimpse-panel.test.ts`、`manual-acceptance-6.2.md`。
 - **Verification**: `pnpm typecheck`、`pnpm -w run lint`、`pnpm test` 全部通过；并在真实 Glimpse 窗口中手工验收提交与取消回传。

@@ -2,7 +2,7 @@
 
 ### Requirement: The Glimpse panel SHALL present questions as a navigable stepped questionnaire
 
-The Glimpse panel SHALL present questions as a navigable stepped questionnaire. 面板必须默认为分步向导：一次呈现一题，并在问题之上提供步骤计数、可点击的步骤指示器和已作答数量。步骤指示器必须区分未作答、已作答和当前步骤，且允许直接跳转到任意步骤或汇总页。面板必须保留单页堆叠形态作为可选布局，两种布局必须共享同一套校验与提交行为。底栏必须固定可见，不得随内容滚动离开视野，其操作按钮必须使用明显的命中面积。
+The Glimpse panel SHALL present questions as a navigable stepped questionnaire. 面板必须默认为分步向导：一次呈现一题，并在问题之上提供步骤计数、可点击的步骤指示器和已作答数量。步骤指示器必须区分未作答、已作答和当前步骤，且允许直接跳转到任意步骤或汇总页。面板必须保留单页堆叠形态作为可选布局，两种布局必须共享同一套校验与提交行为。底栏必须固定可见，不得随内容滚动离开视野，其操作按钮必须使用明显的命中面积。在分步布局下，最后一个问题的主操作必须前进到汇总步骤而不是直接提交；信息类问题不参与作答校验，任何情况下都不得阻塞前进。
 
 #### Scenario: Stepped layout shows position and progress
 - **WHEN** a questionnaire with three answerable questions opens in the default layout
@@ -15,6 +15,14 @@ The Glimpse panel SHALL present questions as a navigable stepped questionnaire. 
 #### Scenario: Stacked layout keeps the same contract
 - **WHEN** the user switches the panel to the stacked layout
 - **THEN** all questions and the review section render in one scrollable column while keyboard hints, validation and submission behaviour stay identical
+
+#### Scenario: Linear navigation ends at the review step
+- **WHEN** the user answers the last question of the stepped layout and activates the primary action
+- **THEN** the panel shows the review step instead of emitting the payload
+
+#### Scenario: Information steps never block progress
+- **WHEN** the stepped layout shows an information question, including one declared as required
+- **THEN** the panel advances past it on the primary action and never reports a missing answer for it
 
 ### Requirement: The Glimpse panel SHALL offer a custom answer for every option-based question
 
@@ -38,7 +46,7 @@ The Glimpse panel SHALL offer a custom answer for every option-based question. �
 
 ### Requirement: The Glimpse panel SHALL summarise every step before submission
 
-The Glimpse panel SHALL summarise every step before submission. 面板必须提供一个汇总确认步骤，位于全部问题之后。汇总必须列出所有步骤，包括信息类问题，并为每个可回答问题显示其当前答案或明确的未作答标记。激活任意汇总条目必须跳转到对应步骤以便修改。汇总步骤必须提供独立于问题答案的整体补充反馈输入。
+The Glimpse panel SHALL summarise every step before submission. 面板必须提供一个汇总确认步骤，位于全部问题之后。汇总必须列出所有步骤，包括信息类问题，并为每个可回答问题显示其当前答案或明确的未作答标记。激活任意汇总条目必须跳转到对应步骤以便修改。汇总步骤必须提供独立于问题答案的整体补充反馈输入。信息类问题没有答案，汇总必须为它显示明确的「无需作答」标记，而不是问题类型名称。
 
 #### Scenario: Review lists every step
 - **WHEN** the user reaches the final step
@@ -51,6 +59,10 @@ The Glimpse panel SHALL summarise every step before submission. 面板必须提�
 #### Scenario: Review feedback is separate from answers
 - **WHEN** the user writes text into the review feedback input
 - **THEN** that text is collected separately from question answers and does not appear as an answer to any question
+
+#### Scenario: Information entries are not shown as answers
+- **WHEN** the review step lists an information question
+- **THEN** its entry states that no answer is required instead of naming the question type
 
 ### Requirement: The Glimpse panel SHALL submit and cancel through the Glimpse bridge
 

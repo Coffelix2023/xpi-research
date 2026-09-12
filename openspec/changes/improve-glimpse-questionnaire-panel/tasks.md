@@ -42,3 +42,16 @@
 - [ ] 6.2 **(待人工)** 见 `manual-acceptance-6.2.md` 的勾选清单。在真实 Glimpse 窗口中手工验收：展开面板、切换到汇总页、提交并确认宿主收到 `cancelled: false` 与规范化答案；再次打开后按 `Esc`，确认宿主收到 `cancelled: true` 与空答案；记录两次载荷
 - [x] 6.3 按 Conventional Commits 小粒度提交（至少拆为：面板重构、模板移植与桥修复、契约扩展与测试、文档同步），`git add <具体文件>` 暂存，确认 `git diff --cached --check` 无空白错误
 - [x] 6.4 推送分支并开 PR，PR 描述包含目的、改动范围与验证方式；停在合并前，由人工确认合并
+
+## 7. 合并后修正（真机验收反馈）
+
+- [ ] 7.1 按 `docs/GITHUB-GUARD.md` 的当前阶段规则在 `main` 上工作（阶段一为 main-only，不开工作分支）；用 `git status --short` 确认工作区除本次变更外干净，并确认 `pnpm typecheck`、`pnpm -w run lint`、`pnpm test` 三条在基线上全绿
+- [ ] 7.2 修正分步流程的终点：`syncFooter()` 去掉「末题直接提交」的分支（非汇总步骤的主按钮一律显示「下一步」），`goNext()` 改为在 `REVIEW_INDEX` 提交、否则前进一页，汇总步骤的 `⏎` 与主按钮仍触发提交；在 `src/glimpse-panel.test.ts` 断言脚本不再以 `QUESTIONS.length - 1` 作为提交判据，`pnpm test` 通过
+- [ ] 7.3 修正信息类问题：`goNext()` 的必答校验排除 `info` 类型；文案字典新增 `noAnswerNeeded`（中/英）并补进 `GlimpsePanelText` 接口；`questionNode()` 的 info 分支追加 `.q-hint` 提示；`GLIMPSE_PANEL_CSS` 增加只引用令牌的 `.q-hint` 规则；补断言「中英键集合一致」「模板不硬编码该文案」
+- [ ] 7.4 汇总条目对信息类问题改用同一个 `noAnswerNeeded` 键，不再渲染问题类型名；补断言
+- [ ] 7.5 从 `src/glimpse.ts` 的 `GlimpsePromptOptions` 与 `promptWithGlimpse` 调用中删除 `theme`、`reduceMotion`、`zoom`（`glimpseui` 的 `open()` 不识别这三个键）；确认 `src/ui.test.ts` 与 `src/index.test.ts` 无需修改即可通过
+- [ ] 7.6 同步文档：`manual-acceptance-6.2.md` 补 A/B/C 段检查项、`skills/xpi-research/SKILL.md` 说明面板恒以汇总步骤收尾因而 `feedback` 总是可达、`DESIGN.md` 记录 `.q-hint`
+- [ ] 7.7 运行 `pnpm typecheck`、`pnpm -w run lint`、`pnpm test` 并留下实际输出作为交付证据
+- [ ] 7.8 浏览器回归验证：末题主操作落到汇总步骤且不发出载荷；汇总页填写反馈后提交的载荷含独立 `feedback`；声明为必答的信息类问题不再阻塞；汇总页信息行显示「无需作答」
+- [ ] 7.9 真实 Glimpse 窗口复跑并补齐 6.2 的 A 段与 B 段（Esc、关窗、取消按钮），记录两次载荷
+- [ ] 7.10 按 Conventional Commits 小粒度提交并推送 `main`；若需要并行隔离再改开 `fix/*` 分支并用 PR，届时由人工确认合并
