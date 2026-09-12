@@ -13,4 +13,4 @@ __pycache__/
 coverage/
 
 # c6x-config
-mise.toml
+**/fast-fixes
