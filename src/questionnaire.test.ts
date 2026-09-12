@@ -433,6 +433,33 @@ describe("validateQuestionnaire", () => {
     });
   });
 
+  it("never treats an information question as a required answer", () => {
+    const input = validateQuestionnaire({
+      presentation: "visual",
+      questions: [
+        singleQuestion("choice"),
+        {
+          id: "note",
+          prompt: "Background",
+          required: true,
+          type: "info",
+        },
+      ],
+    });
+
+    expect(
+      normalizeAnswers(
+        input,
+        {
+          choice: "Option",
+        },
+        7,
+      ).answers,
+    ).toEqual({
+      choice: "Option",
+    });
+  });
+
   it("returns explicit cancellation without partial answers", () => {
     expect(cancelledResult(9)).toEqual({
       answers: {},

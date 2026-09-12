@@ -300,6 +300,8 @@ export function normalizeAnswers(
 ): QuestionnaireResult {
   const answers: Answers = {};
   for (const question of questionnaire.questions) {
+    // Information questions carry no answer, so `required` cannot apply to them.
+    if (question.type === "info") continue;
     if (!Object.hasOwn(rawAnswers, question.id)) {
       if (question.required) {
         throw new Error(`required question has no valid answer: ${question.id}`);
