@@ -1,4 +1,11 @@
-import { existsSync } from "node:fs";
+import {
+  appendFileSync,
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { renderGlimpseQuestionnaire } from "./glimpse-panel.ts";
@@ -61,6 +68,102 @@ function candidatePaths(): string[] {
   ];
 }
 
+const GLIMPSE_QUIET_DIR = path.join(tmpdir(), "xpi-research-glimpse");
+
+/**
+ * `glimpseui` spawns its native window host with `stdio: ['pipe','pipe','inherit']`,
+ * so the host's stderr lands on Pi's own stderr — the very channel the TUI owns. On
+ * macOS InputMethodKit writes there ("error messaging the mach port for
+ * IMKCFRunLoopWakeUpReliable") and that text paints over the user's editor.
+ *
+ * macOS only on purpose: the same override flips glimpseui's `supportsOpenLinks`
+ * flag, which is only honest for the macOS host.
+ */
+export function buildGlimpseWrapper(realBinary: string, logPath: string): string {
+  return `#!/bin/sh\nexec "${realBinary}" "$@" 2>"${logPath}"\n`;
+}
+
+/**
+ * Returns the wrapper path, or null when the launch must be left alone: another
+ * platform, a caller who declared its own host, or a module with no native binary
+ * beside it (the Linux/Chromium backend spawns Node instead).
+ *
+ * A module beside `glimpse` is what this extension loads, so the sibling binary is
+ * the one glimpseui itself would spawn.
+ */
+export function quietGlimpseBinary(modulePath: string | undefined): string | null {
+  if (process.platform !== "darwin") return null;
+  if (process.env.GLIMPSE_BINARY_PATH || process.env.GLIMPSE_HOST_PATH) return null;
+  if (!modulePath || !path.isAbsolute(modulePath)) return null;
+  const binary = path.join(path.dirname(modulePath), "glimpse");
+  if (!existsSync(binary)) return null;
+  try {
+    mkdirSync(GLIMPSE_QUIET_DIR, {
+      recursive: true,
+    });
+    const wrapper = path.join(GLIMPSE_QUIET_DIR, "glimpse-quiet");
+    // One log per launch, overwritten: the diagnostic is worth keeping, an
+    // unbounded log is not.
+    writeFileSync(
+      wrapper,
+      buildGlimpseWrapper(binary, path.join(GLIMPSE_QUIET_DIR, "glimpse-stderr.log")),
+    );
+    chmodSync(wrapper, 0o755);
+    return wrapper;
+  } catch {
+    // A wrapper that cannot be written must never block the panel: keep the raw host.
+    return null;
+  }
+}
+
+/**
+ * The override lives only while the window is being started: every later launch and
+ * every other extension keeps the environment it had. glimpseui's `ensureBinary()`
+ * re-reads `GLIMPSE_BINARY_PATH` on each launch, so a call-scoped override suffices.
+ *
+ * Only `prompt` is wrapped because it is the sole entry this extension uses; wrap
+ * `open` too if it ever becomes a caller.
+ */
+export function wrapGlimpseBinary(
+  module: GlimpseModule,
+  wrapper: string | null,
+): GlimpseModule {
+  if (!wrapper) return module;
+  return {
+    ...module,
+    prompt(html: string, options?: GlimpsePromptOptions) {
+      const previous = process.env.GLIMPSE_BINARY_PATH;
+      process.env.GLIMPSE_BINARY_PATH = wrapper;
+      try {
+        return module.prompt(html, options);
+      } finally {
+        if (previous === undefined) delete process.env.GLIMPSE_BINARY_PATH;
+        else process.env.GLIMPSE_BINARY_PATH = previous;
+      }
+    },
+  };
+}
+
+/**
+ * A candidate that exists but cannot load is real breakage worth keeping, but not on
+ * stderr: this process's stderr belongs to the TUI, so warning there paints over the
+ * user's editor. Diagnostics never break fail-closed, hence the swallowed write error.
+ */
+function recordLoadFailure(candidate: string, error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error);
+  try {
+    mkdirSync(GLIMPSE_QUIET_DIR, {
+      recursive: true,
+    });
+    appendFileSync(
+      path.join(GLIMPSE_QUIET_DIR, "glimpse-load-error.log"),
+      `${new Date().toISOString()} ${candidate} ${message}\n`,
+    );
+  } catch {
+    // Ignored on purpose: callers still fall back to the TUI.
+  }
+}
+
 export async function loadGlimpse(
   paths = candidatePaths(),
 ): Promise<GlimpseModule | null> {
@@ -74,12 +177,11 @@ export async function loadGlimpse(
       const moduleRecord = isRecord(moduleValue) ? moduleValue : undefined;
       const loaded =
         asGlimpseModule(moduleRecord?.default) ?? asGlimpseModule(moduleValue);
-      if (loaded) return loaded;
+      if (loaded) return wrapGlimpseBinary(loaded, quietGlimpseBinary(candidate));
     } catch (error) {
-      // The candidate exists but cannot load, which is a real breakage worth surfacing.
-      console.warn(
-        `[glimpse] failed to load candidate ${candidate}: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      // A candidate that exists but cannot load is real breakage: record it, and never
+      // on stderr — this process's stderr belongs to the TUI.
+      recordLoadFailure(candidate, error);
     }
   }
   return null;
