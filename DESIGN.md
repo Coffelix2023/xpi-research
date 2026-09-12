@@ -220,12 +220,13 @@ Aligned label-value pairs with dimmed muted keys and crisp ink values.
 
 ### 7. Questionnaire Panel (dual-track interactive window)
 
-The Glimpse micro-window that collects research answers follows the modal architecture above and adds four rules:
+The Glimpse micro-window that collects research answers follows the modal architecture above and adds five rules:
 
 - **Stepped by default.** One question per screen, with a step bar that carries the position counter, one activation dot per step plus the review step, and the answered count. A stacked layout that shows every question in one scroll is available, and both layouts share the same validation and submission behaviour.
 - **Option cards, not lines.** Each option is a card whose title carries the label, whose sub-text carries the description, and whose monospace well carries the preview. Anything longer than a short phrase belongs in the description: a paragraph in the label renders as a wall of text.
 - **A way out of every choice.** Each option question offers a custom entry that reveals a text input, exclusive for single questions and additive for multiple-choice ones.
 - **A review step closes the panel.** It lists every step, marks unanswered questions, jumps back to any of them, and owns its own comment field, which travels outside the answer map.
+- **Information steps are inert.** An information question carries no answer, so it never takes part in required-answer validation and never blocks the flow. The panel says so on the step and in the review entry instead of printing the question type name.
 
 The footer stays pinned while content scrolls, and its actions carry a hit area large enough to read at a glance. Keyboard contract: `Esc` cancels, `Enter` advances, `Cmd/Ctrl+Enter` submits, `Tab` and arrows work inside the option groups.
 

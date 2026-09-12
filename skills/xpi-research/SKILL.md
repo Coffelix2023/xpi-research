@@ -66,8 +66,11 @@ is not guaranteed to match one of your options:
 - `multi`: your option labels in the order you declared them, plus at most one
   free-text entry appended at the end.
 - `text`: the user's own text.
-- `feedback`: the optional overall comment from the review step. It answers no
-  question; keep it out of per-question analysis.
+- `info`: never carries an answer, so it never appears in `answers` and never
+  blocks submission.
+- `feedback`: the optional overall comment from the review step, which the panel
+  always shows last. It answers no question; keep it out of per-question
+  analysis.
 
 Match an answer against your labels first. When it matches nothing, treat it as
 the user's own wording and quote it as written instead of forcing it into an

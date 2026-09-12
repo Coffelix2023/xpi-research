@@ -102,9 +102,10 @@ counter, clickable step dots and an answered count above the question, and a
 pinned footer below it. Every single and multiple-choice question offers a
 custom entry, and each option renders as a card that separates its label, its
 description, and its monospace preview. The last step reviews every answer,
-marks the unanswered ones, and adds one optional overall comment. The interface
-switches between Simplified Chinese and English, follows the system appearance,
-and supports zooming.
+marks the unanswered ones, and adds one optional overall comment. Information
+questions carry no answer and are never required. The interface switches
+between Simplified Chinese and English, follows the system appearance, and
+supports zooming.
 
 Esc, closing a panel, or cancelling a native dialog returns `cancelled: true`
 with an empty answer object. Required questions remain answerable until the
