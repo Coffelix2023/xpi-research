@@ -209,6 +209,16 @@ describe("xpi_research_ask", () => {
       round: 1,
     });
   });
+
+  it("reports a missing round instead of a false cancellation", async () => {
+    const runtime = createRuntime();
+    const tool = runtime.tools.get("xpi_research_ask");
+    if (!tool) throw new Error("ask tool was not registered");
+
+    await expect(
+      tool.execute("call-4", questionnaire, undefined, undefined, runtime.context),
+    ).rejects.toThrow("No active research round");
+  });
   it("returns a bounded error result when UI execution fails", async () => {
     const runtime = createRuntime();
     runtime.uiError = new Error("UI failed");
@@ -342,5 +352,22 @@ describe("/xpi-research lifecycle", () => {
     const runtime = createRuntime();
 
     expect(runtime.events.has("input")).toBe(false);
+  });
+
+  it("deactivates the ask tool after settling even when it was active before the round", async () => {
+    const runtime = createRuntime();
+    runtime.activeTools = [
+      "read",
+      "bash",
+      "xpi_research_ask",
+    ];
+
+    await runCommand(runtime, "target");
+    await runtime.events.get("agent_settled")?.({}, runtime.context);
+
+    expect(runtime.activeTools).toEqual([
+      "read",
+      "bash",
+    ]);
   });
 });

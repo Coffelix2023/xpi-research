@@ -5,7 +5,6 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import {
-  cancelledResult,
   serializeQuestionnaireResult,
   validateQuestionnaire,
 } from "./questionnaire.ts";
@@ -122,7 +121,10 @@ export default function xpiResearch(pi: ExtensionAPI): void {
   async function executeAskTool(params: Questionnaire, ctx: ExtensionContext) {
     const session = activeSession;
     if (!session || session.cleaned) {
-      return resultToolResponse(cancelledResult(0));
+      // No round is running, so nothing was asked: a fake cancellation would be read as a user decision.
+      throw new Error(
+        "No active research round. Start one with /xpi-research <target> on a single line.",
+      );
     }
 
     let questionnaire: Questionnaire;
@@ -193,12 +195,12 @@ export default function xpiResearch(pi: ExtensionAPI): void {
       if (!target) return;
 
       const session: ResearchSession = {
+        // Pi activates newly registered extension tools by default, so the ask tool is
+        // already active here; drop it or cleanup() would restore it forever.
+        activeToolNames: pi.getActiveTools().filter((name) => name !== ASK_TOOL_NAME),
         cleaned: false,
         round: nextRound++,
         status: "active",
-        activeToolNames: [
-          ...pi.getActiveTools(),
-        ],
         target,
       };
       activeSession = session;
