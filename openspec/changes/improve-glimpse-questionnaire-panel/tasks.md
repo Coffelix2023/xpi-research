@@ -54,5 +54,5 @@
 - [x] 7.7 运行 `pnpm typecheck`、`pnpm -w run lint`、`pnpm test` 并留下实际输出作为交付证据
 - [x] 7.8 浏览器回归验证：末题主操作落到汇总步骤且不发出载荷；汇总页填写反馈后提交的载荷含独立 `feedback`；声明为必答的信息类问题不再阻塞；汇总页信息行显示「无需作答」
 - [x] 7.9 真实 Glimpse 窗口复跑：A 段（走到汇总页、填写反馈、提交）与 B 段的 `Esc` 已在真实窗口通过并记录载荷；关窗与取消按钮两条路径用同一份渲染产物在浏览器中验证（`prompt()` 关窗返回 `null` 的分支见 `glimpseui/src/glimpse.mjs:306-311`）
-- [ ] 7.10 按 Conventional Commits 小粒度提交并推送 `main`；若需要并行隔离再改开 `fix/*` 分支并用 PR，届时由人工确认合并
+- [x] 7.10 按 Conventional Commits 小粒度提交并推送 `main`（8 个提交，`a31a22f..4220b74`）；本仓库处于 `GITHUB-GUARD.md` 的阶段一，未开工作分支
 - [x] 7.11 宿主侧同样修正：`normalizeAnswers()` 跳过 `info` 类型，不再把「信息类问题没有答案」判成「必答问题缺少有效答案」；在 `src/questionnaire.test.ts` 补一条用例，覆盖「信息类问题被标成必答但用户已作答全部可答题」的场景
