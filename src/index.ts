@@ -138,13 +138,22 @@ export default function xpiResearch(pi: ExtensionAPI): void {
       const result = await askQuestionnaire(ctx, questionnaire, {
         round: session.round,
       });
+      // Cancelling the panel ends the round. Deliberately NOT on agent_settled: that fires at
+      // every run boundary, including the one pi finishes right after the command handler
+      // returns, which used to withdraw the tool before its first question.
+      if (result.cancelled) cleanup(ctx);
       return resultToolResponse(result);
     } catch {
+      // A failed panel must not leave the tool active: hand the tool set back, then report.
+      cleanup(ctx);
       throw new Error("Research questionnaire interaction failed.");
     }
   }
 
   pi.registerTool({
+    // Registered inactive: a direct tool activates on registration, which would declare the
+    // panel to every session and invite calls with no research round behind them.
+    defaultActive: false,
     description: "Ask bounded research questions and return structured user decisions.",
     executionMode: "sequential",
     label: "Research Questions",
@@ -182,10 +191,6 @@ export default function xpiResearch(pi: ExtensionAPI): void {
         ctx.ui.notify("Agent is busy.", "warning");
         return;
       }
-      if (activeSession) {
-        ctx.ui.notify("A research round is already active.", "warning");
-        return;
-      }
       if (!ctx.hasUI) {
         ctx.ui.notify("Research UI is unavailable.", "warning");
         return;
@@ -194,10 +199,14 @@ export default function xpiResearch(pi: ExtensionAPI): void {
       const target = await resolveTarget(args, ctx);
       if (!target) return;
 
+      // A repeated /xpi-research reuses the outer tool set of the round still in flight, so the
+      // command is safe to repeat even though only a cancelled panel or shutdown releases it.
+      const outerToolNames =
+        activeSession?.activeToolNames ??
+        pi.getActiveTools().filter((name) => name !== ASK_TOOL_NAME);
+
       const session: ResearchSession = {
-        // Pi activates newly registered extension tools by default, so the ask tool is
-        // already active here; drop it or cleanup() would restore it forever.
-        activeToolNames: pi.getActiveTools().filter((name) => name !== ASK_TOOL_NAME),
+        activeToolNames: outerToolNames,
         cleaned: false,
         round: nextRound++,
         status: "active",
@@ -222,10 +231,6 @@ export default function xpiResearch(pi: ExtensionAPI): void {
         ctx.ui.notify("Unable to start the research round.", "error");
       }
     },
-  });
-
-  pi.on("agent_settled", (_event, ctx) => {
-    cleanup(ctx);
   });
 
   pi.on("session_shutdown", (_event, ctx) => {

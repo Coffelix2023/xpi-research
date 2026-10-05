@@ -2,6 +2,7 @@ import type {
   ExtensionAPI,
   ExtensionCommandContext,
   ExtensionContext,
+  ExtensionToolContext,
   ExtensionUIContext,
   ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
@@ -29,6 +30,7 @@ interface FakeRuntime {
     key: string;
     text: string | undefined;
   }>;
+  toolContext: ExtensionToolContext;
   tools: Map<string, ToolDefinition>;
   uiError: Error | undefined;
 }
@@ -94,6 +96,8 @@ function createRuntime(): FakeRuntime {
     isIdle: () => runtime.idle,
     ui,
   } as ExtensionContext;
+  // 只补 execute 真正读到的字段即可；这里的双强转是让 ExtensionContext 的测试替身满足 ExtensionToolContext。
+  runtime.toolContext = runtime.context as unknown as ExtensionToolContext;
 
   runtime.api = {
     getActiveTools: () => runtime.activeTools,
@@ -165,7 +169,7 @@ describe("xpi_research_ask", () => {
       questionnaire,
       undefined,
       undefined,
-      runtime.context,
+      runtime.toolContext,
     );
 
     expect(result?.details).toEqual({
@@ -200,7 +204,7 @@ describe("xpi_research_ask", () => {
       questionnaire,
       undefined,
       undefined,
-      runtime.context,
+      runtime.toolContext,
     );
 
     expect(result?.details).toEqual({
@@ -216,7 +220,7 @@ describe("xpi_research_ask", () => {
     if (!tool) throw new Error("ask tool was not registered");
 
     await expect(
-      tool.execute("call-4", questionnaire, undefined, undefined, runtime.context),
+      tool.execute("call-4", questionnaire, undefined, undefined, runtime.toolContext),
     ).rejects.toThrow("No active research round");
   });
   it("returns a bounded error result when UI execution fails", async () => {
@@ -227,8 +231,14 @@ describe("xpi_research_ask", () => {
     const tool = runtime.tools.get("xpi_research_ask");
     if (!tool) throw new Error("ask tool was not registered");
     await expect(
-      tool.execute("call-3", questionnaire, undefined, undefined, runtime.context),
+      tool.execute("call-3", questionnaire, undefined, undefined, runtime.toolContext),
     ).rejects.toThrow("Research questionnaire interaction failed.");
+
+    // 面板失败也必须交还工具集，否则它会一直留在活跃集里。
+    expect(runtime.activeTools).toEqual([
+      "read",
+      "bash",
+    ]);
   });
 });
 
@@ -284,7 +294,7 @@ describe("/xpi-research lifecycle", () => {
     expect(runtime.notifications).toContain("Research UI is unavailable.");
   });
 
-  it("rejects busy and duplicate starts without changing state", async () => {
+  it("keeps a busy agent out and lets a repeated start reuse the same tool set", async () => {
     const runtime = createRuntime();
     runtime.idle = false;
 
@@ -294,20 +304,36 @@ describe("/xpi-research lifecycle", () => {
 
     runtime.idle = true;
     await runCommand(runtime, "first");
-    const historyLength = runtime.activeToolHistory.length;
     await runCommand(runtime, "second");
 
-    expect(runtime.activeToolHistory).toHaveLength(historyLength);
-    expect(runtime.sentMessages).toHaveLength(1);
-    expect(runtime.notifications).toContain("A research round is already active.");
+    // 重复命令不再被拒：面板没被取消时工具仍在活跃集里，拒绝会把用户锁死。
+    expect(runtime.sentMessages).toHaveLength(2);
+    expect(runtime.activeTools).toEqual([
+      "read",
+      "bash",
+      "xpi_research_ask",
+    ]);
+    expect(runtime.activeToolHistory).toEqual([
+      [
+        "read",
+        "bash",
+        "xpi_research_ask",
+      ],
+      [
+        "read",
+        "bash",
+        "xpi_research_ask",
+      ],
+    ]);
   });
 
   it("restores the exact tool snapshot and clears status idempotently", async () => {
     const runtime = createRuntime();
     await runCommand(runtime, "target");
 
-    await runtime.events.get("agent_settled")?.({}, runtime.context);
-    await runtime.events.get("agent_settled")?.({}, runtime.context);
+    // 收尾不再挂在 agent_settled 上：那是 run 级事件，会在命令刚激活工具、第一次提问之前撤销它。
+    expect(runtime.events.has("agent_settled")).toBe(false);
+    await runtime.events.get("session_shutdown")?.({}, runtime.context);
     await runtime.events.get("session_shutdown")?.({}, runtime.context);
 
     expect(runtime.activeTools).toEqual([
@@ -354,20 +380,36 @@ describe("/xpi-research lifecycle", () => {
     expect(runtime.events.has("input")).toBe(false);
   });
 
-  it("deactivates the ask tool after settling even when it was active before the round", async () => {
+  it("hands the ask tool back when the panel is cancelled, even if it was active before the round", async () => {
     const runtime = createRuntime();
     runtime.activeTools = [
       "read",
       "bash",
       "xpi_research_ask",
     ];
+    runtime.selectAnswer = undefined;
 
     await runCommand(runtime, "target");
-    await runtime.events.get("agent_settled")?.({}, runtime.context);
+    const tool = runtime.tools.get("xpi_research_ask");
+    await tool?.execute(
+      "call-cancel",
+      questionnaire,
+      undefined,
+      undefined,
+      runtime.toolContext,
+    );
 
     expect(runtime.activeTools).toEqual([
       "read",
       "bash",
+    ]);
+    // 交还之后再启动：外层工具集重新取自 getActiveTools()，而不是复用已清空的记录。
+    runtime.selectAnswer = "Beta";
+    await runCommand(runtime, "again");
+    expect(runtime.activeTools).toEqual([
+      "read",
+      "bash",
+      "xpi_research_ask",
     ]);
   });
 });
